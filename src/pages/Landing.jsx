@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import SettrAvatar from '../components/SettrAvatar'
-import SettrChat from '../components/RamboChat'
+import SettrDemo from '../components/RamboChat'
 
 // Stripe Payment Links - monthly subscription + one-time setup fee, promo codes enabled
 // After payment, redirects to /setup
@@ -86,6 +86,7 @@ export default function Landing() {
             <span className="text-rambo-green font-bold text-sm tracking-wider">SETT3R</span>
           </div>
           <div className="flex items-center gap-6 text-xs">
+            <a href="#demo" className="text-rambo-dim hover:text-rambo-green transition-colors">DEMO</a>
             <a href="#features" className="text-rambo-dim hover:text-rambo-green transition-colors">FEATURES</a>
             <a href="#comparison" className="text-rambo-dim hover:text-rambo-green transition-colors">VS VA</a>
             <a href="#pricing" className="text-rambo-dim hover:text-rambo-green transition-colors">PRICING</a>
@@ -132,17 +133,17 @@ export default function Landing() {
 
           <div className="flex gap-4 justify-center flex-wrap">
             <a
-              href="#pricing"
+              href="#demo"
               className="bg-rambo-green text-rambo-bg font-bold px-8 py-3 rounded border-2 border-rambo-green hover:bg-transparent hover:text-rambo-green transition-all duration-200 cursor-pointer text-sm tracking-wider inline-block"
             >
-              SEE PRICING &gt;&gt;
+              TALK TO SETT3R &gt;&gt;
             </a>
-            <button
-              onClick={() => navigate('/builder')}
-              className="border-2 border-rambo-border text-rambo-dim px-8 py-3 rounded hover:border-rambo-green hover:text-rambo-green transition-all duration-200 cursor-pointer text-sm tracking-wider"
+            <a
+              href="#pricing"
+              className="border-2 border-rambo-border text-rambo-dim px-8 py-3 rounded hover:border-rambo-green hover:text-rambo-green transition-all duration-200 cursor-pointer text-sm tracking-wider inline-block"
             >
-              TRY THE BUILDER
-            </button>
+              SEE PRICING
+            </a>
           </div>
         </div>
       </section>
@@ -158,6 +159,9 @@ export default function Landing() {
           ))}
         </div>
       </section>
+
+      {/* LIVE DEMO */}
+      <SettrDemo />
 
       {/* PROBLEM */}
       <section className="relative z-10 max-w-4xl mx-auto px-6 py-20">
@@ -360,7 +364,7 @@ export default function Landing() {
         </p>
 
         <p className="text-center text-xs text-rambo-dim mt-8">
-          Not sure which tier? Talk to SETT3R in the chat widget. No contracts - cancel anytime.
+          Not sure which tier? <a href="#demo" className="text-rambo-green hover:underline">Talk to SETT3R</a> above. No contracts - cancel anytime.
         </p>
       </section>
 
@@ -431,8 +435,6 @@ export default function Landing() {
         </div>
       </footer>
 
-      {/* Chat Widget */}
-      <SettrChat />
     </div>
   )
 }

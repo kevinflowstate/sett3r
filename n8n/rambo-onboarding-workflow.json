@@ -1,5 +1,5 @@
 {
-  "name": "RAMBO - Auto Onboarding (Stripe → GHL Sub-Account)",
+  "name": "RAMBO - Auto Onboarding (Stripe \u2192 GHL Sub-Account)",
   "nodes": [
     {
       "parameters": {
@@ -11,7 +11,10 @@
       "name": "Stripe Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [220, 300],
+      "position": [
+        220,
+        300
+      ],
       "webhookId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     },
     {
@@ -41,7 +44,10 @@
       "name": "Filter: checkout.session.completed",
       "type": "n8n-nodes-base.filter",
       "typeVersion": 2,
-      "position": [440, 300]
+      "position": [
+        440,
+        300
+      ]
     },
     {
       "parameters": {
@@ -51,7 +57,10 @@
       "name": "Extract Customer Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [660, 300]
+      "position": [
+        660,
+        300
+      ]
     },
     {
       "parameters": {
@@ -77,7 +86,10 @@
       "name": "Create GHL Sub-Account",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [880, 300],
+      "position": [
+        880,
+        300
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_WITH_CREDENTIAL_ID",
@@ -93,7 +105,10 @@
       "name": "Merge Location + Customer Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1100, 300]
+      "position": [
+        1100,
+        300
+      ]
     },
     {
       "parameters": {
@@ -119,7 +134,10 @@
       "name": "Create Default Pipeline",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 180],
+      "position": [
+        1320,
+        180
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_WITH_CREDENTIAL_ID",
@@ -151,7 +169,10 @@
       "name": "Create Default Tags",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1320, 420],
+      "position": [
+        1320,
+        420
+      ],
       "credentials": {
         "httpHeaderAuth": {
           "id": "REPLACE_WITH_CREDENTIAL_ID",
@@ -172,7 +193,10 @@
       "name": "Slack: Notify Kevin",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1560, 180]
+      "position": [
+        1560,
+        180
+      ]
     },
     {
       "parameters": {
@@ -189,14 +213,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"from\": \"RAMBO <onboarding@flowstatesystems.ai>\",\n  \"to\": [\"{{ $json.customerEmail }}\"],\n  \"subject\": \"You're in. RAMBO is being deployed.\",\n  \"html\": \"<div style='font-family: monospace; background: #0a0a0f; color: #c0c0d0; padding: 40px; max-width: 600px;'><h1 style='color: #39ff14; font-size: 28px;'>RAMBO ACTIVATED</h1><p>Hey {{ $json.firstName }},</p><p>Your AI setter is being configured right now. Your GHL account for <strong>{{ $json.businessName }}</strong> is live and ready.</p><p>Here's what happens next:</p><ul style='color: #c0c0d0;'><li>Your onboarding call is where we connect your socials (Instagram, Facebook, etc.)</li><li>We'll walk through your AI setter personality and qualifying questions</li><li>You'll be live and booking appointments within 24 hours of the call</li></ul><p>If you haven't booked your onboarding call yet, reply to this email and we'll get you sorted.</p><p style='color: #39ff14;'>-- RAMBO // Flowstate Systems</p></div>\"\n}",
+        "jsonBody": "={\"from\": \"SETT3R <hello@sett3r.com>\", \"to\": [\"{{ $json.customerEmail }}\"], \"subject\": \"Your SETT3R account is live.\", \"html\": \"<!DOCTYPE html><html><head>  <meta charset=\\\"utf-8\\\">  <meta name=\\\"viewport\\\" content=\\\"width=device-width, initial-scale=1.0\\\">  <title>Welcome to SETT3R</title></head><body style=\\\"margin:0; padding:0; background-color:#0a0a0f; font-family:\\\\'Courier New\\\\', monospace;\\\">  <table width=\\\"100%\\\" cellpadding=\\\"0\\\" cellspacing=\\\"0\\\" style=\\\"background-color:#0a0a0f; padding:40px 20px;\\\">    <tr>      <td align=\\\"center\\\">        <table width=\\\"600\\\" cellpadding=\\\"0\\\" cellspacing=\\\"0\\\" style=\\\"max-width:600px;\\\">          <!-- Green top bar -->          <tr>            <td style=\\\"height:3px; background-color:#39ff14;\\\"></td>          </tr>          <!-- Header -->          <tr>            <td style=\\\"background-color:#12121a; padding:30px 40px; border-left:1px solid #1e1e2e; border-right:1px solid #1e1e2e;\\\">              <table width=\\\"100%\\\">                <tr>                  <td>                    <span style=\\\"color:#39ff14; font-size:24px; font-weight:bold; letter-spacing:2px;\\\">SETT3R</span>                    <br>                    <span style=\\\"color:#555566; font-size:11px; letter-spacing:3px;\\\">AI APPOINTMENT SETTER</span>                  </td>                  <td align=\\\"right\\\">                    <span style=\\\"color:#39ff14; font-size:11px;\\\">&#9679; ACCOUNT ACTIVE</span>                  </td>                </tr>              </table>            </td>          </tr>          <!-- Body -->          <tr>            <td style=\\\"background-color:#12121a; padding:10px 40px 30px; border-left:1px solid #1e1e2e; border-right:1px solid #1e1e2e;\\\">              <p style=\\\"color:#c0c0d0; font-size:15px; line-height:1.7; margin:0 0 20px;\\\">                Hey {{ $json.businessName }},              </p>              <p style=\\\"color:#c0c0d0; font-size:14px; line-height:1.7; margin:0 0 20px;\\\">                Your SETT3R account is live. While your VA is reading this email, your AI setter is already ready to go.              </p>              <!-- Terminal block -->              <table width=\\\"100%\\\" cellpadding=\\\"0\\\" cellspacing=\\\"0\\\" style=\\\"margin:20px 0;\\\">                <tr>                  <td style=\\\"background-color:#0a0a0f; border:1px solid #1e1e2e; border-radius:6px; padding:20px;\\\">                    <p style=\\\"color:#c0c0d0; font-size:13px; line-height:2; margin:0;\\\">                      <span style=\\\"color:#39ff14;\\\">$&gt;</span> Account created<br>                      <span style=\\\"color:#39ff14;\\\">$&gt;</span> CRM provisioned<br>                      <span style=\\\"color:#39ff14;\\\">$&gt;</span> Builder access: <a href=\\\"https://sett3r.com/login\\\" style=\\\"color:#39ff14;\\\">sett3r.com/login</a><br>                      <span style=\\\"color:#39ff14;\\\">$&gt;</span> Status: awaiting configuration_                    </p>                  </td>                </tr>              </table>              <p style=\\\"color:#c0c0d0; font-size:14px; line-height:1.7; margin:20px 0;\\\">                Here\\\\'s what happens next:              </p>              <!-- Steps -->              <table width=\\\"100%\\\" cellpadding=\\\"0\\\" cellspacing=\\\"0\\\" style=\\\"margin:0 0 25px;\\\">                <tr>                  <td style=\\\"padding:10px 0; border-bottom:1px solid #1e1e2e;\\\">                    <span style=\\\"color:#39ff14; font-size:20px; font-weight:bold; opacity:0.3; margin-right:12px;\\\">01</span>                    <span style=\\\"color:#c0c0d0; font-size:13px;\\\"><strong style=\\\"color:#c0c0d0;\\\">Configure your setter</strong> - Log in to the builder, add your business details, personality, and qualifying questions. Takes 5 minutes.</span>                  </td>                </tr>                <tr>                  <td style=\\\"padding:10px 0; border-bottom:1px solid #1e1e2e;\\\">                    <span style=\\\"color:#39ff14; font-size:20px; font-weight:bold; opacity:0.3; margin-right:12px;\\\">02</span>                    <span style=\\\"color:#c0c0d0; font-size:13px;\\\"><strong style=\\\"color:#c0c0d0;\\\">Book your onboarding call</strong> - 15 minutes. We connect your Instagram, SMS, and calendar. You can do this from the builder once your config hits 80%.</span>                  </td>                </tr>                <tr>                  <td style=\\\"padding:10px 0;\\\">                    <span style=\\\"color:#39ff14; font-size:20px; font-weight:bold; opacity:0.3; margin-right:12px;\\\">03</span>                    <span style=\\\"color:#c0c0d0; font-size:13px;\\\"><strong style=\\\"color:#c0c0d0;\\\">Go live</strong> - SETT3R starts responding to every inbound lead instantly. You get a weekly summary of conversations, bookings, and no-shows recovered.</span>                  </td>                </tr>              </table>              <!-- CTA Button -->              <table width=\\\"100%\\\" cellpadding=\\\"0\\\" cellspacing=\\\"0\\\">                <tr>                  <td align=\\\"center\\\" style=\\\"padding:10px 0 20px;\\\">                    <a href=\\\"https://sett3r.com/login\\\" style=\\\"display:inline-block; background-color:#39ff14; color:#0a0a0f; font-weight:bold; font-size:13px; letter-spacing:2px; padding:14px 32px; border-radius:4px; text-decoration:none; font-family:\\\\'Courier New\\\\', monospace;\\\">                      OPEN BUILDER &gt;&gt;                    </a>                  </td>                </tr>              </table>              <p style=\\\"color:#555566; font-size:12px; line-height:1.7; margin:10px 0 0;\\\">                Questions? Just reply to this email. A human will answer. Ironic, we know.              </p>            </td>          </tr>          <!-- Footer -->          <tr>            <td style=\\\"background-color:#0a0a0f; padding:20px 40px; border-top:1px solid #1e1e2e;\\\">              <p style=\\\"color:#555566; font-size:10px; margin:0; letter-spacing:1px;\\\">                SETT3R // Built by Flowstate Systems              </p>              <p style=\\\"color:#555566; font-size:10px; margin:5px 0 0;\\\">                <a href=\\\"https://sett3r.com\\\" style=\\\"color:#39ff14; text-decoration:none;\\\">sett3r.com</a>                &nbsp;&nbsp;|&nbsp;&nbsp;                <a href=\\\"https://flowstatesystems.ai\\\" style=\\\"color:#555566; text-decoration:none;\\\">flowstatesystems.ai</a>              </p>            </td>          </tr>          <!-- Green bottom bar -->          <tr>            <td style=\\\"height:3px; background-color:#39ff14;\\\"></td>          </tr>        </table>      </td>    </tr>  </table></body></html>\"}",
         "options": {}
       },
       "id": "send-welcome-email",
       "name": "Email: Welcome Client",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1560, 420]
+      "position": [
+        1560,
+        420
+      ]
     }
   ],
   "connections": {

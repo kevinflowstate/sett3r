@@ -49,10 +49,10 @@ const TIERS = [
 ]
 
 const VA_COMPARISON = [
-  { label: 'Response time', va: '5-30 minutes', settr: 'Under 5 seconds' },
-  { label: 'Availability', va: '8 hours/day, weekdays', settr: '24/7/365' },
+  { label: 'Response time', va: 'Whenever they get a chance', settr: 'Under 5 seconds' },
+  { label: 'Availability', va: 'An hour here and there between their other clients', settr: '24/7/365' },
   { label: 'Conversations/day', va: '20-30 max', settr: 'Unlimited' },
-  { label: 'Follows up consistently', va: 'Sometimes', settr: 'Every single time' },
+  { label: 'Follows up consistently', va: 'lol', settr: 'Every single time' },
   { label: 'Handles objections', va: 'Reads a script', settr: 'Adapts in real-time' },
   { label: 'Multi-channel', va: 'One at a time', settr: 'All channels, one brain' },
   { label: 'Takes holidays', va: 'Yes', settr: 'Never' },

@@ -55,7 +55,7 @@ const DEFAULT_NEVER_SAY = `"You're a rockstar!"
 "No worries at all!!!"`
 
 
-const BOOKING_URL = 'https://api.leadconnectorhq.com/widget/booking/sett3r-onboarding'
+const BOOKING_SLUG = 'flowsate-marketing-consultation'
 
 export default function Builder() {
   const navigate = useNavigate()
@@ -659,39 +659,27 @@ export default function Builder() {
       {/* Booking Modal */}
       {showBooking && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowBooking(false)}>
-          <div className="bg-rambo-card border border-rambo-green rounded-lg p-8 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-3 mb-4">
-              <SettrAvatar size={40} />
-              <div>
-                <h3 className="text-rambo-green font-bold text-sm">ONBOARDING UNLOCKED</h3>
-                <p className="text-rambo-dim text-xs">Readiness score: {score}/100</p>
+          <div className="bg-rambo-card border border-rambo-green rounded-lg overflow-hidden max-w-2xl w-full mx-4" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-rambo-border flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <SettrAvatar size={32} />
+                <div>
+                  <h3 className="text-rambo-green font-bold text-sm">BOOK YOUR ONBOARDING CALL</h3>
+                  <p className="text-rambo-dim text-[10px]">15 minutes // We'll connect your channels and go live</p>
+                </div>
               </div>
-            </div>
-            <div className="border border-rambo-border rounded p-4 mb-4 text-xs text-rambo-text space-y-2">
-              <p><span className="text-rambo-green">$&gt;</span> Business: {businessName || 'Not set'}</p>
-              <p><span className="text-rambo-green">$&gt;</span> Personality: {personality}</p>
-              <p><span className="text-rambo-green">$&gt;</span> Questions: {questions.filter(q => q.trim()).length}</p>
-              <p><span className="text-rambo-green">$&gt;</span> Chat turns tested: {turnCount}</p>
-            </div>
-            <p className="text-xs text-rambo-dim mb-4">
-              Your SETT3R config is ready for deployment. Book a 15-minute onboarding call to go live.
-            </p>
-            <div className="flex gap-3">
-              <a
-                href={BOOKING_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 bg-rambo-green text-rambo-bg py-2 rounded text-xs font-bold tracking-wider hover:shadow-[0_0_20px_#39ff14] transition-all cursor-pointer text-center block"
-              >
-                BOOK CALL
-              </a>
               <button
-                className="border border-rambo-border text-rambo-dim py-2 px-4 rounded text-xs hover:border-rambo-dim transition-colors cursor-pointer"
+                className="text-rambo-dim hover:text-rambo-red text-lg cursor-pointer px-2"
                 onClick={() => setShowBooking(false)}
               >
-                CLOSE
+                x
               </button>
             </div>
+            <iframe
+              src={`https://api.leadconnectorhq.com/widget/booking/${BOOKING_SLUG}`}
+              style={{ width: '100%', height: '600px', border: 'none' }}
+              title="Book onboarding call"
+            />
           </div>
         </div>
       )}

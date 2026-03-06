@@ -237,7 +237,7 @@ export default function Builder() {
                 type="text"
                 value={businessName}
                 onChange={e => setBusinessName(e.target.value)}
-                placeholder="e.g. Fortis Training"
+                placeholder="e.g. Peak Performance Studio"
                 className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-sm text-rambo-text focus:border-rambo-green focus:outline-none transition-colors"
               />
             </div>

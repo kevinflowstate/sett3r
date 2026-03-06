@@ -119,7 +119,7 @@ export default function Setup() {
                 value={businessName}
                 onChange={e => setBusinessName(e.target.value)}
                 required
-                placeholder="e.g. Fortis Training Systems"
+                placeholder="e.g. Peak Performance Studio"
                 className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-sm text-rambo-text placeholder:text-rambo-dim/40 focus:border-rambo-green focus:outline-none"
               />
             </div>

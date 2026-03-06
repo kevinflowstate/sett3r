@@ -71,7 +71,7 @@ export default function Setup() {
             <div className="border border-rambo-border bg-rambo-bg/60 rounded p-4 mb-6 text-left text-sm">
               <p className="text-rambo-text leading-loose">
                 <span className="text-rambo-green">$&gt;</span> Account created for {businessName}<br />
-                <span className="text-rambo-green">$&gt;</span> GHL sub-account provisioning...<br />
+                <span className="text-rambo-green">$&gt;</span> CRM account provisioning...<br />
                 <span className="text-rambo-green">$&gt;</span> You'll receive an onboarding email shortly.<span className="cursor-blink" />
               </p>
             </div>

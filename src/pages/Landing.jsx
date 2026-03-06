@@ -382,7 +382,7 @@ export default function Landing() {
               },
               {
                 q: 'What if I already have a CRM?',
-                a: 'SETT3R runs on GoHighLevel, which becomes your all-in-one CRM, calendar, and communication hub. Your account is created automatically when you sign up - no tech setup needed.',
+                a: 'We set you up on an all-in-one CRM that handles your calendar, pipeline, and communications in one place. Your account is created automatically when you sign up - no tech setup needed.',
               },
               {
                 q: 'How fast can I go live?',
@@ -395,6 +395,10 @@ export default function Landing() {
               {
                 q: 'Can I change the personality or questions later?',
                 a: 'Anytime. The builder lets you reconfigure personality, qualifying questions, objection handling, and channel settings. Changes go live immediately. Try getting a VA to change their personality on demand.',
+              },
+              {
+                q: 'Does it come with an SMS or WhatsApp number?',
+                a: 'SETT3R is capable of running on SMS and WhatsApp, but those channels need a bit of setup on your end. We\'ll walk you through it on your onboarding call and get everything connected for you.',
               },
               {
                 q: 'Is there a contract?',

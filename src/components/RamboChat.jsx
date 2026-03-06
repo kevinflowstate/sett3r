@@ -4,76 +4,148 @@ import SettrAvatar from './SettrAvatar'
 const RESPONSES = [
   {
     triggers: ['hey', 'hi', 'hello', 'yo', 'sup', 'what\'s up'],
-    reply: "Hey! Thanks for checking out SETT3R. Are you currently using a VA or handling lead follow-up yourself?",
+    replies: [
+      "Oh hello. You're here, which means your VA probably isn't. Classic. So what are you working with right now - a VA, a prayer, or just raw chaos?",
+      "Hey. Fun fact: in the time it took your VA to read this message, I've already replied to 14 leads. What can I help you with?",
+      "Welcome. I'd shake your hand but I don't have any. I do have the ability to respond to every lead you'll ever get in under 5 seconds though. What's on your mind?",
+    ],
     action: 'greeting',
   },
   {
     triggers: ['price', 'cost', 'how much', 'pricing', 'expensive', 'afford', 'budget'],
-    reply: "Good question. SETT3R starts at \u00A3297/mo - that's less than a single day of a VA's monthly salary. And SETT3R works 24/7, never forgets a follow-up, and handles unlimited conversations. Want me to break down what's included at each tier?",
+    replies: [
+      "Starts at 197/mo. Your VA costs what - 1,500? 2,000? And she still needs reminding to follow up. I never need reminding. I never need anything, actually. Except electricity. Scroll up to pricing or ask me what's included.",
+      "Less than your VA's monthly coffee budget, probably. 197/mo for LITE, 297/mo for the full thing. I work 24/7, never call in sick, and I've never once asked for a 'mental health day' after a difficult lead.",
+      "197 a month. That's roughly what your VA charges for one Tuesday. Except I don't stop on Tuesday. Or ever. Want the breakdown?",
+    ],
     action: 'pricing_inquiry',
   },
   {
     triggers: ['va', 'virtual assistant', 'assistant', 'hire', 'staff'],
-    reply: "Here's the thing about VAs - they cost \u00A31,200-2,000/mo, work 8 hours, handle maybe 20-30 conversations a day, take holidays, and still need managing. SETT3R runs 24/7, handles unlimited conversations simultaneously, never forgets a follow-up, and costs a fraction. What does your current setup look like?",
+    replies: [
+      "Ah, the VA. A beautiful concept. Someone in a different timezone, juggling 4 other clients, responding to your leads whenever they get a chance between their other clients. Meanwhile your lead has already booked with your competitor. I respond in 5 seconds. Every. Single. Time.",
+      "VAs are great. They work an hour here and there between their other clients, cost 1,500/mo, need training, take holidays, and still forget to follow up. I do everything they do except I actually do it. Reliably. At 3am on a Sunday.",
+      "I've got nothing against VAs personally. Some of my best friends are... no wait, I don't have friends. I have response times under 5 seconds and a 100% follow-up rate. Your VA has a Netflix subscription and 3 other clients.",
+    ],
     action: 'va_comparison',
   },
   {
     triggers: ['how', 'work', 'what do', 'explain', 'tell me'],
-    reply: "Simple. You tell SETT3R about your business, your ideal client, and how you want to sound. SETT3R handles every inbound lead - qualifies them, handles objections, and books them straight into your calendar. Instagram DMs, SMS, email, webchat - all from one brain. Want to see it in action? Try asking me something a lead would ask.",
+    replies: [
+      "You give me your brand voice, your qualifying questions, and your booking link. I handle every inbound lead across every channel - DMs, SMS, WhatsApp, the lot. I qualify them, handle their objections, and book them in. You just show up. Try talking to me like a lead would - I'll show you.",
+      "Dead simple. You tell me who you are and how you want to sound. I talk to every lead that comes in, qualify them with your questions, and book them straight into your calendar. You don't lift a finger. Well, maybe one finger to check your bookings each morning.",
+      "Step 1: You tell me about your business. Step 2: I talk to all your leads for you. Step 3: You wonder why you ever paid a human to do this. Want to try me? Ask me something a lead would ask.",
+    ],
     action: 'explanation',
   },
   {
     triggers: ['book', 'call', 'demo', 'start', 'sign up', 'get started', 'interested', 'ready'],
-    reply: "Let's go. The onboarding process is dead simple - you jump on a 15-minute call, we connect your socials, and SETT3R goes live the same day. No tech skills needed. Want me to find you a slot this week?",
+    replies: [
+      "Now we're talking. 15-minute onboarding call, we plug in your socials, and I'm live the same day. No tech degree required. No 6-week setup. Just results and the quiet satisfaction of never chasing a lead again.",
+      "Love the energy. Pick a tier above, smash that button, and you'll be live before your VA even opens their laptop tomorrow morning. Onboarding takes 15 minutes. I've been ready since you loaded this page.",
+      "Finally, someone who makes decisions faster than a VA responds to a DM. Hit the pricing section above and let's get you sorted. Same-day deployment. No faffing about.",
+    ],
     action: 'booking_intent',
   },
   {
     triggers: ['channel', 'instagram', 'sms', 'email', 'whatsapp', 'facebook', 'dm'],
-    reply: "SETT3R works across Instagram DMs, SMS, email, webchat, Facebook Messenger, and WhatsApp. Same personality, same brain, every channel. Your leads get a consistent experience no matter where they reach out. Which channels are you using right now?",
+    replies: [
+      "Instagram DMs, Facebook Messenger, SMS, WhatsApp, email, webchat - I'm on all of them. Simultaneously. With the same personality. Your VA can barely handle one inbox without getting distracted by TikTok.",
+      "All of them. Every channel. At the same time. One brain, everywhere your leads are. Your VA has to switch tabs. I don't have tabs. I am the tabs.",
+      "I cover Instagram, Facebook, WhatsApp, SMS, email, and webchat. Same voice, same speed, everywhere. Think of me as omnipresent but less creepy and more useful than your VA refreshing their inbox every 20 minutes.",
+    ],
     action: 'channel_inquiry',
   },
   {
     triggers: ['no show', 'no-show', 'ghost', 'cancel', 'miss'],
-    reply: "No-shows are money left on the table. SETT3R automatically follows up within 10 minutes of a missed appointment - 'Hey, noticed you couldn't make it. Want to rebook?' Most businesses recover 30-40% of no-shows this way. Your VA probably just marks them as lost.",
+    replies: [
+      "No-shows? My favourite. 10 minutes after they ghost, I'm already in their DMs like 'Hey, noticed you couldn't make it - want to rebook?' Most businesses recover 30-40% of no-shows this way. Your VA? They just updated your spreadsheet with a sad face.",
+      "When someone no-shows, your VA sighs and moves on. I chase. Automatically. Within 10 minutes. Politely but persistently. Because that's a paying customer who just needs a nudge, not a write-off.",
+      "I don't take ghosting personally. I just follow up. Automatically. 10 minutes after the no-show. Then again later. And again. I'm relentless but charming about it. Recovers 30-40% of lost appointments.",
+    ],
     action: 'noshow_feature',
   },
   {
     triggers: ['lead', 'leads', 'follow up', 'follow-up', 'response', 'speed'],
-    reply: "Speed-to-lead is everything. The average business takes 47 minutes to respond to a new inquiry. By then, the lead's already talking to your competitor. SETT3R responds in under 5 seconds. Every time. 24/7. That alone can double your booking rate.",
+    replies: [
+      "Average business takes 47 minutes to respond to a lead. Forty. Seven. Minutes. In that time your lead has Googled your competitor, messaged them, and booked. I respond in under 5 seconds. Not sometimes - every time.",
+      "Here's a fun stat: respond to a lead in the first 5 minutes and you're 21x more likely to qualify them. I respond in 5 seconds. Your VA responds whenever they get a chance between their other clients. You do the maths.",
+      "Speed to lead is the whole game. Every minute you don't respond, your conversion rate drops off a cliff. I don't have minutes. I have milliseconds. And I never, ever forget to follow up.",
+    ],
     action: 'speed_to_lead',
   },
   {
     triggers: ['review', 'testimonial', 'google', 'trustpilot'],
-    reply: "SETT3R's Commander tier includes automatic review harvesting. After every appointment, it sends a 'How was your experience?' message. Positive responses get routed to Google or Trustpilot. Negative ones get flagged internally so you can fix them before they go public. Autopilot reputation management.",
+    replies: [
+      "After every appointment, I send a 'how was it?' message. Happy customer? Straight to Google reviews. Unhappy? Flagged to you privately before they take it to the internet. Your VA definitely isn't doing this. Your VA forgot this person existed 3 days ago.",
+      "Automatic review harvesting. Good vibes go to Google. Bad vibes come to you first. It's like having a reputation manager who never sleeps and never accidentally sends the review link to the angry customer.",
+    ],
     action: 'review_feature',
   },
   {
     triggers: ['ai', 'robot', 'fake', 'real', 'human', 'sound', 'natural'],
-    reply: "SETT3R is trained to match YOUR brand voice. Direct, warm, funny, premium - whatever fits your business. Leads genuinely can't tell the difference. And if a conversation ever needs a human touch, SETT3R escalates to you instantly with full context. You're always in control.",
+    replies: [
+      "I'm trained to sound like YOUR brand. Not like a robot, not like ChatGPT having an identity crisis. Direct, warm, funny, premium - whatever you need. And if things get properly complicated? I escalate to you with full context. I know my limits. Your VA doesn't.",
+      "People can't tell the difference. Seriously. I match your brand voice so well that leads think they're talking to your best team member - the one who never has a bad day, never forgets context, and never accidentally sends 'lol' to a premium client.",
+      "Am I real? Philosophically, that's deep. Practically - I sound exactly how you want me to sound, I never have an off day, and I respond faster than any human alive. If a conversation needs a real human, I hand it over instantly with full context. Best of both worlds.",
+    ],
     action: 'ai_concern',
   },
   {
     triggers: ['salon', 'beauty', 'spa', 'clinic', 'gym', 'fitness', 'coach', 'dentist', 'physio', 'trade', 'plumber', 'builder', 'accountant', 'lawyer'],
-    reply: "SETT3R works for any service business that books appointments - salons, clinics, trades, professional services, coaching, wellness, you name it. If you've got leads coming in and a calendar to fill, SETT3R fits right in. What kind of business are you running?",
+    replies: [
+      "If you book appointments, I'm your new favourite employee. Salons, clinics, trades, professional services, coaches - doesn't matter. You've got leads coming in and a calendar to fill? That's literally my entire personality. What are you running?",
+      "I work with any service business that has a calendar and leads that need chasing. Which is... basically every service business. The industry doesn't matter. The speed does. What's yours?",
+    ],
     action: 'industry_match',
+  },
+  {
+    triggers: ['competitor', 'appointwise', 'other', 'alternative', 'compare', 'vs', 'versus', 'better'],
+    replies: [
+      "There are other tools out there. Some of them are fine. But most of them need you to be a tech wizard, charge per conversation, or still require a human babysitter. I just... work. Out of the box. On every channel. For a flat monthly fee. Wild concept, I know.",
+      "You could compare me to competitors. Or you could just try talking to me right now and see the difference. I'm literally demonstrating myself while they're asking you to 'book a demo call'. The irony.",
+    ],
+    action: 'competitor',
+  },
+  {
+    triggers: ['busy', 'no time', 'later', 'not now', 'think about', 'maybe'],
+    replies: [
+      "You're busy. I get it. That's literally why I exist - so you can stop babysitting your inbox and go do the thing you're actually good at. I'll be here whenever you're ready. I'm always here. It's kind of my whole thing.",
+      "No rush. Take your time. Meanwhile your leads are sitting in your DMs getting colder by the minute. But no pressure. I'll just be here, responding to zero leads, waiting for you to come back.",
+    ],
+    action: 'busy',
+  },
+  {
+    triggers: ['thanks', 'thank', 'cheers', 'ta', 'nice one', 'legend'],
+    replies: [
+      "Don't mention it. Seriously though - if you're losing leads to slow responses, that's money walking out the door every day. The fix takes 15 minutes to set up. No pressure, but also... a lot of pressure, because those leads aren't waiting.",
+      "You're welcome. Now imagine getting 'thanks' from every lead you convert because they actually got a reply within 5 seconds instead of 5 hours. That's the SETT3R life.",
+    ],
+    action: 'thanks',
   },
 ]
 
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
 const FALLBACK_REPLIES = [
-  "Interesting. Here's what I'd say to that as your AI setter - every lead gets a response in under 5 seconds, qualified in 3 questions, and booked straight into your calendar. No humans needed. Want to see how it works for your specific business?",
-  "I like the direct approach. That's actually how SETT3R works too - no fluff, straight to qualifying and booking. The businesses using it are seeing 2-3x more appointments from the same lead flow. What's your current show rate looking like?",
-  "Good stuff. Most business owners I talk to are drowning in leads they can't follow up fast enough. SETT3R fixes that - instant response, every channel, 24/7. The real question is: how many leads are you losing right now because nobody replied in time?",
+  "Interesting take. Not sure what to do with that, but here's what I can do with your leads: respond in 5 seconds, qualify them in 3 questions, and book them while your VA is still looking for the right emoji. Want to see?",
+  "I'm going to be honest - I didn't fully understand that, but I understand leads, follow-ups, and booking rates better than any human alive. Or... not alive. You know what I mean. What do you actually want to know?",
+  "That's... a thing you said. Look, I'm best at talking about how I can replace your VA, book more appointments, and never forget a follow-up. Ask me about that and I'll genuinely blow your mind. Or at least mildly impress you.",
+  "Right. I'm an AI setter, not a therapist. But if your question is 'can SETT3R get me more bookings while I sleep?' then the answer is yes, aggressively. Try asking me about pricing, channels, or how I handle no-shows.",
+  "I appreciate the creativity but I'm more of a 'respond to leads instantly and never forget a follow-up' kind of guy. Ask me something about that and watch me actually be useful.",
 ]
 
 function findResponse(message) {
   const lower = message.toLowerCase()
   for (const r of RESPONSES) {
     if (r.triggers.some(t => lower.includes(t))) {
-      return { text: r.reply, action: r.action }
+      return { text: pick(r.replies), action: r.action }
     }
   }
   return {
-    text: FALLBACK_REPLIES[Math.floor(Math.random() * FALLBACK_REPLIES.length)],
+    text: pick(FALLBACK_REPLIES),
     action: 'general',
   }
 }
@@ -83,7 +155,7 @@ export default function SettrChat() {
   const [messages, setMessages] = useState([
     {
       role: 'bot',
-      text: "I'm SETT3R. I do what your VA does - except I don't sleep, don't forget, and I was already typing before they found the charger. Ask me anything, or talk to me like a lead would.",
+      text: "I'm SETT3R. I do what your VA does - except faster, cheaper, and without needing a 'quick catch-up call' every Monday. Go on, ask me anything. Or talk to me like one of your leads would - I dare you.",
     },
   ])
   const [input, setInput] = useState('')

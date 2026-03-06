@@ -35,16 +35,14 @@ export default function Setup() {
 
       if (authError) throw authError
 
-      // Create their sett3r_clients row
-      const { error: insertError } = await supabase
-        .from('sett3r_clients')
-        .insert({
-          user_id: authData.user.id,
-          email,
-          business_name: businessName,
-          stripe_customer_id: sessionId || null,
-          tier: 'lite', // default, updated by webhook
-        })
+      // Create their sett3r_clients row via RPC (bypasses RLS for unconfirmed users)
+      const { error: insertError } = await supabase.rpc('create_sett3r_client', {
+        p_user_id: authData.user.id,
+        p_email: email,
+        p_business_name: businessName,
+        p_stripe_session: sessionId || null,
+        p_tier: 'lite',
+      })
 
       if (insertError) throw insertError
 

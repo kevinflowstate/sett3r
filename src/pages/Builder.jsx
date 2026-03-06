@@ -55,7 +55,7 @@ const DEFAULT_NEVER_SAY = `"You're a rockstar!"
 "No worries at all!!!"`
 
 
-const BOOKING_SLUG = 'flowsate-marketing-consultation'
+const BOOKING_EMBED_URL = 'https://link.flowstatemarketing.net/widget/booking/SakMmy8k0UBXP0gGP7eT'
 
 export default function Builder() {
   const navigate = useNavigate()
@@ -676,7 +676,7 @@ export default function Builder() {
               </button>
             </div>
             <iframe
-              src={`https://api.leadconnectorhq.com/widget/booking/${BOOKING_SLUG}`}
+              src={BOOKING_EMBED_URL}
               style={{ width: '100%', height: '600px', border: 'none' }}
               title="Book onboarding call"
             />

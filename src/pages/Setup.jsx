@@ -46,6 +46,13 @@ export default function Setup() {
 
       if (insertError) throw insertError
 
+      // Auto-confirm email so they can log in immediately
+      await fetch('/api/confirm-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: authData.user.id }),
+      })
+
       setStep(2)
     } catch (err) {
       setError(err.message || 'Something went wrong')

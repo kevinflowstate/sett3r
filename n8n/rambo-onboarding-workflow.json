@@ -183,7 +183,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer re_ZVFh2QhZ_j4zDVwWFELCALD3kaqr8e4t5"
+              "value": "Bearer RESEND_API_KEY"
             }
           ]
         },

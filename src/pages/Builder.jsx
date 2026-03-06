@@ -2,14 +2,13 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SettrAvatar from '../components/SettrAvatar'
 
-const PERSONALITIES = ['Direct', 'Warm', 'Funny', 'Elite coach', 'Luxury']
+const PERSONALITIES = ['Direct', 'Warm', 'Funny', 'Professional', 'Luxury']
 
-const SCENARIOS = {
-  price_shopper: { label: 'Price Shopper', tag: 'price_shopper' },
-  busy: { label: 'Busy / Short Replies', tag: 'busy_lead' },
-  curious: { label: 'Curious / Interested', tag: 'curious' },
-  unqualified: { label: 'Unqualified', tag: 'unqualified' },
-}
+const DEFAULT_QUESTIONS = [
+  "What's the main goal you're looking to achieve?",
+  "Have you tried anything before for this?",
+  "What's your timeline - are you looking to start soon?",
+]
 
 const DEFAULT_PROMPT = `You are an AI appointment setter for {{business_name}}.
 Your personality is {{personality}}.
@@ -19,71 +18,109 @@ Rules:
 - Never be pushy. Mirror their energy.
 - Ask max 3 qualifying questions before offering a booking.
 - If unqualified, gracefully exit and tag appropriately.
-- Always confirm date/time before booking.
+- Always confirm date/time before booking.`
 
-Qualifying questions:
-1. What's the main goal you're looking to achieve?
-2. Have you tried anything before for this?
-3. What's your timeline - are you looking to start soon?`
+const DEFAULT_NEVER_SAY = `"You're a rockstar!"
+"Totally amazeballs!"
+"Just circle back on that"
+"Let's touch base"
+"Super excited!!!"
+"No worries at all!!!"`
 
-function generateReply(scenario, personality, businessName, message, turnCount) {
+function detectIntent(message) {
+  const lower = message.toLowerCase()
+  if (/how much|price|cost|rates?|afford|budget|pay|expensive|cheap/i.test(lower))
+    return 'price'
+  if (/busy|quick|short|hurry|no time|later|not now/i.test(lower))
+    return 'busy'
+  if (/not (sure|ready|interested)|maybe later|just looking|browsing/i.test(lower))
+    return 'cold'
+  if (/book|appointment|schedule|slot|available|sign up|start/i.test(lower))
+    return 'booking'
+  if (/what do you|how does|tell me|info|more about|explain|details/i.test(lower))
+    return 'curious'
+  if (/hi|hey|hello|yo|sup|morning|afternoon/i.test(lower))
+    return 'greeting'
+  return 'general'
+}
+
+function generateReply(personality, businessName, questions, message, turnCount, history) {
   const biz = businessName || 'our team'
   const tone = personality || 'Direct'
+  const intent = detectIntent(message)
 
   const greetings = {
-    Direct: `Hey. Thanks for reaching out to ${biz}. Quick question -`,
+    Direct: `Hey. Thanks for reaching out to ${biz}.`,
     Warm: `Hey there! So glad you messaged ${biz}. I'd love to help you out.`,
-    Funny: `Well well well... another victim for ${biz}. Just kidding. Mostly.`,
-    'Elite coach': `Appreciate you reaching out to ${biz}. Not everyone takes this step.`,
+    Funny: `Well well well... look who slid into ${biz}'s DMs. Love it.`,
+    Professional: `Thanks for getting in touch with ${biz}. Happy to help.`,
     Luxury: `Welcome. You've connected with ${biz}. Let's see if we're the right fit.`,
   }
 
-  const scenarioReplies = {
-    price_shopper: {
-      replies: [
-        `I totally get it - price matters. Before I throw numbers at you, can I ask what you're actually looking to achieve? That way I can tell you exactly what you'd get.`,
-        `Great. And have you invested in anything like this before? Just want to make sure I recommend the right option for you.`,
-        `Perfect. So here's the thing - we've got a few options depending on where you're at. The best way to figure out the right one is a quick 15-min call with ${biz}. I can get you booked in - what day works?`,
-      ],
-      actions: ['ask_q1', 'ask_q2', 'offer_booking'],
-    },
-    busy: {
-      replies: [
-        `No worries, I'll keep it quick. What's the #1 thing you're looking for from ${biz}?`,
-        `Got it. Want me to get you a quick 15-min slot so we can sort it? Takes 2 mins to book.`,
-        `Done. I'll send the link. Talk soon.`,
-      ],
-      actions: ['ask_q1_short', 'offer_booking', 'confirm_booking'],
-    },
-    curious: {
-      replies: [
-        `Great question! ${biz} specialises in exactly that. Let me ask - what's your main goal right now?`,
-        `Love that. And have you worked with anyone on this before, or is this your first time exploring it?`,
-        `You sound like a great fit. The next step is a quick discovery call - no pressure, just a conversation. Want me to find you a slot this week?`,
-      ],
-      actions: ['ask_q1', 'ask_q2', 'offer_booking'],
-    },
-    unqualified: {
-      replies: [
-        `Thanks for reaching out! Quick one - are you based in our service area? Just want to make sure we can actually help you.`,
-        `Ah got it. Unfortunately we're not the best fit for what you need right now. But I'd recommend checking out [alternative]. They might be more aligned.`,
-        `No problem at all. Best of luck with everything!`,
-      ],
-      actions: ['qualify_check', 'disqualify', 'exit_gracefully'],
-    },
+  // First message always gets a greeting
+  if (turnCount === 0) {
+    const q = questions[0] || "What's the main goal you're looking to achieve?"
+    return {
+      text: `${greetings[tone]} Quick question - ${q.toLowerCase().replace(/\?$/, '')}?`,
+      action: 'qualify_q1',
+    }
   }
 
-  const data = scenarioReplies[scenario] || scenarioReplies.curious
-  const idx = Math.min(turnCount, data.replies.length - 1)
+  // Price intent
+  if (intent === 'price') {
+    return {
+      text: `Totally get it - price matters. Before I throw numbers at you though, can I ask what you're actually looking to achieve? That way I can tell you exactly what you'd get for the investment.`,
+      action: 'handle_objection',
+    }
+  }
 
-  let reply = turnCount === 0
-    ? greetings[tone] + ' ' + data.replies[0]
-    : data.replies[idx]
+  // Busy / short replies
+  if (intent === 'busy') {
+    return {
+      text: `No worries, I'll keep it quick. The easiest next step is a 15-min call with ${biz} - no pressure, just a quick chat to see if we can help. Want me to find you a slot?`,
+      action: 'offer_booking',
+    }
+  }
 
+  // Cold / not interested
+  if (intent === 'cold') {
+    return {
+      text: `Completely understand - no pressure at all. If anything changes or you want to pick this up later, just message back anytime. The door's always open.`,
+      action: 'soft_exit',
+    }
+  }
+
+  // Booking intent
+  if (intent === 'booking') {
+    return {
+      text: `Brilliant - let's get you sorted. I can book you in for a quick 15-minute discovery call with ${biz}. What day works best for you this week?`,
+      action: 'book_appointment',
+    }
+  }
+
+  // Curious / wants info
+  if (intent === 'curious') {
+    const q = questions[Math.min(turnCount, questions.length - 1)] || "What's your timeline - are you looking to start soon?"
+    return {
+      text: `Great question! I can definitely help with that. Just so I can point you in the right direction - ${q.toLowerCase().replace(/\?$/, '')}?`,
+      action: `qualify_q${Math.min(turnCount + 1, questions.length)}`,
+    }
+  }
+
+  // General / follow-up - cycle through qualifying questions
+  if (turnCount <= questions.length) {
+    const qIdx = Math.min(turnCount, questions.length - 1)
+    const q = questions[qIdx]
+    return {
+      text: `Got it, thanks for sharing that. ${turnCount < questions.length ? q : `You sound like a great fit. The next step is a quick discovery call with ${biz} - no pressure, just a conversation. Want me to find you a slot this week?`}`,
+      action: turnCount < questions.length ? `qualify_q${turnCount + 1}` : 'offer_booking',
+    }
+  }
+
+  // Past qualifying questions - push toward booking
   return {
-    text: reply,
-    action: data.actions[idx] || 'continue',
-    tag: SCENARIOS[scenario]?.tag || 'unknown',
+    text: `Based on everything you've told me, I think we can definitely help. The best next step is a quick 15-min call with ${biz}. Want me to get you booked in?`,
+    action: 'offer_booking',
   }
 }
 
@@ -94,11 +131,12 @@ export default function Builder() {
   const [businessName, setBusinessName] = useState('')
   const [targetAudience, setTargetAudience] = useState('')
   const [personality, setPersonality] = useState('Direct')
+  const [questions, setQuestions] = useState(DEFAULT_QUESTIONS)
+  const [neverSay, setNeverSay] = useState(DEFAULT_NEVER_SAY)
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT)
   const [jsonPreview, setJsonPreview] = useState(null)
   const [saved, setSaved] = useState(false)
 
-  const [scenario, setScenario] = useState('price_shopper')
   const [chatInput, setChatInput] = useState('')
   const [messages, setMessages] = useState([])
   const [turnCount, setTurnCount] = useState(0)
@@ -108,25 +146,25 @@ export default function Builder() {
 
   const steps = [
     { label: 'Business name', done: businessName.length > 2 },
-    { label: 'Target audience', done: targetAudience.length > 2 },
+    { label: 'Target audience', done: targetAudience.length > 10 },
     { label: 'Personality selected', done: !!personality },
+    { label: 'Qualifying questions', done: questions.some(q => q !== DEFAULT_QUESTIONS[0]) || questions.length !== 3 },
     { label: 'Prompt configured', done: prompt !== DEFAULT_PROMPT },
     { label: 'Config generated', done: !!jsonPreview },
-    { label: 'Draft saved', done: saved },
     { label: 'Chat tested (3+ turns)', done: turnCount >= 3 },
   ]
 
   useEffect(() => {
     let s = 0
     if (businessName.length > 2) s += 10
-    if (targetAudience.length > 2) s += 10
+    if (targetAudience.length > 10) s += 15
     if (personality) s += 10
+    if (questions.some(q => q !== DEFAULT_QUESTIONS[0]) || questions.length !== 3) s += 10
     if (prompt !== DEFAULT_PROMPT) s += 10
     if (jsonPreview) s += 20
-    if (saved) s += 15
     s += Math.min(turnCount * 5, 25)
     setScore(Math.min(s, 100))
-  }, [businessName, targetAudience, personality, prompt, jsonPreview, saved, turnCount])
+  }, [businessName, targetAudience, personality, questions, prompt, jsonPreview, turnCount])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -143,8 +181,9 @@ export default function Builder() {
       business: businessName || 'Unnamed',
       target_audience: targetAudience || 'Not specified',
       personality,
-      channels: ['instagram_dm', 'sms', 'email'],
-      qualifying_questions: 3,
+      qualifying_questions: questions.filter(q => q.trim()),
+      never_say: neverSay.split('\n').map(s => s.replace(/^["']|["']$/g, '').trim()).filter(Boolean),
+      channels: ['instagram_dm', 'sms'],
       max_followups: 5,
       booking_integration: 'calendly',
       prompt_hash: btoa(prompt).slice(0, 12),
@@ -161,8 +200,8 @@ export default function Builder() {
   function handleSend() {
     if (!chatInput.trim()) return
     const userMsg = { role: 'user', text: chatInput }
-    const reply = generateReply(scenario, personality, businessName, chatInput, turnCount)
-    const botMsg = { role: 'bot', text: reply.text, action: reply.action, tag: reply.tag }
+    const reply = generateReply(personality, businessName, questions, chatInput, turnCount, messages)
+    const botMsg = { role: 'bot', text: reply.text, action: reply.action }
 
     setMessages(prev => [...prev, userMsg, botMsg])
     setChatInput('')
@@ -172,6 +211,18 @@ export default function Builder() {
   function resetChat() {
     setMessages([])
     setTurnCount(0)
+  }
+
+  function updateQuestion(idx, value) {
+    setQuestions(prev => prev.map((q, i) => i === idx ? value : q))
+  }
+
+  function addQuestion() {
+    if (questions.length < 5) setQuestions(prev => [...prev, ''])
+  }
+
+  function removeQuestion(idx) {
+    if (questions.length > 1) setQuestions(prev => prev.filter((_, i) => i !== idx))
   }
 
   return (
@@ -243,13 +294,13 @@ export default function Builder() {
             </div>
 
             <div>
-              <label className="block text-xs text-rambo-dim mb-1">TARGET AUDIENCE</label>
-              <input
-                type="text"
+              <label className="block text-xs text-rambo-dim mb-1">ABOUT YOUR BUSINESS & AUDIENCE</label>
+              <textarea
                 value={targetAudience}
                 onChange={e => setTargetAudience(e.target.value)}
-                placeholder="e.g. Small business owners looking for more clients"
-                className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-sm text-rambo-text focus:border-rambo-green focus:outline-none transition-colors"
+                rows={5}
+                placeholder="Tell us everything about your business & who you sell to. The more detail, the better SETT3R performs. What do you offer? Who's your ideal client? What problems do you solve?"
+                className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-sm text-rambo-text focus:border-rambo-green focus:outline-none transition-colors leading-relaxed resize-y"
               />
             </div>
 
@@ -273,11 +324,58 @@ export default function Builder() {
             </div>
 
             <div>
+              <label className="block text-xs text-rambo-dim mb-2">QUALIFYING QUESTIONS</label>
+              <p className="text-[10px] text-rambo-dim mb-2">SETT3R asks these before offering a booking. Drag to reorder.</p>
+              <div className="space-y-2">
+                {questions.map((q, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <span className="text-rambo-green text-xs w-4">{i + 1}.</span>
+                    <input
+                      type="text"
+                      value={q}
+                      onChange={e => updateQuestion(i, e.target.value)}
+                      placeholder="e.g. What's your main goal?"
+                      className="flex-1 bg-rambo-bg border border-rambo-border rounded px-3 py-1.5 text-xs text-rambo-text focus:border-rambo-green focus:outline-none"
+                    />
+                    {questions.length > 1 && (
+                      <button
+                        onClick={() => removeQuestion(i)}
+                        className="text-rambo-dim hover:text-rambo-red text-xs cursor-pointer px-1"
+                      >
+                        x
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {questions.length < 5 && (
+                <button
+                  onClick={addQuestion}
+                  className="mt-2 text-[10px] text-rambo-green hover:text-rambo-green/80 cursor-pointer"
+                >
+                  + Add question
+                </button>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs text-rambo-dim mb-1">NEVER SAY</label>
+              <p className="text-[10px] text-rambo-dim mb-2">Phrases your SETT3R should never use. One per line.</p>
+              <textarea
+                value={neverSay}
+                onChange={e => setNeverSay(e.target.value)}
+                rows={5}
+                placeholder={`"You're a rockstar!"\n"Totally amazeballs!"\n"Let's touch base"`}
+                className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-text focus:border-rambo-green focus:outline-none transition-colors leading-relaxed resize-y"
+              />
+            </div>
+
+            <div>
               <label className="block text-xs text-rambo-dim mb-1">SYSTEM PROMPT</label>
               <textarea
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
-                rows={10}
+                rows={8}
                 className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-text focus:border-rambo-green focus:outline-none transition-colors leading-relaxed resize-y"
               />
             </div>
@@ -310,35 +408,37 @@ export default function Builder() {
 
         {/* RIGHT */}
         <aside className="border-l border-rambo-border flex flex-col bg-rambo-card/30">
-          <div className="p-4 border-b border-rambo-border">
-            <h2 className="text-rambo-green text-xs tracking-widest mb-3 uppercase">Chat Simulator</h2>
-            <div className="flex items-center gap-2">
-              <label className="text-[10px] text-rambo-dim">SCENARIO:</label>
-              <select
-                value={scenario}
-                onChange={e => { setScenario(e.target.value); resetChat() }}
-                className="bg-rambo-bg border border-rambo-border rounded px-2 py-1 text-xs text-rambo-text focus:border-rambo-green focus:outline-none cursor-pointer flex-1"
-              >
-                {Object.entries(SCENARIOS).map(([key, val]) => (
-                  <option key={key} value={key}>{val.label}</option>
-                ))}
-              </select>
-              <button
-                onClick={resetChat}
-                className="text-rambo-dim text-[10px] border border-rambo-border px-2 py-1 rounded hover:border-rambo-red hover:text-rambo-red transition-colors cursor-pointer"
-              >
-                RESET
-              </button>
-            </div>
+          <div className="p-4 border-b border-rambo-border flex items-center justify-between">
+            <h2 className="text-rambo-green text-xs tracking-widest uppercase">Chat Simulator</h2>
+            <button
+              onClick={resetChat}
+              className="text-rambo-dim text-[10px] border border-rambo-border px-2 py-1 rounded hover:border-rambo-red hover:text-rambo-red transition-colors cursor-pointer"
+            >
+              RESET
+            </button>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 && (
-              <p className="text-rambo-dim text-xs text-center mt-8">
-                Send a message to test SETT3R's responses.
-                <br />
-                Personality: <span className="text-rambo-green">{personality}</span>
-              </p>
+              <div className="text-center mt-8">
+                <p className="text-rambo-dim text-xs mb-2">
+                  Type anything a lead might say.
+                </p>
+                <p className="text-rambo-dim text-[10px]">
+                  SETT3R will respond based on your config.
+                </p>
+                <div className="mt-4 space-y-1">
+                  {['"How much is it?"', '"Hey, I saw your post"', '"I\'m interested but busy"', '"What do you offer?"'].map((hint, i) => (
+                    <button
+                      key={i}
+                      onClick={() => { setChatInput(hint.replace(/"/g, '')); }}
+                      className="block mx-auto text-[10px] text-rambo-purple hover:text-rambo-green cursor-pointer transition-colors"
+                    >
+                      {hint}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             {messages.map((msg, i) => (
               <div key={i}>
@@ -360,7 +460,6 @@ export default function Builder() {
                 {msg.role === 'bot' && (
                   <div className="flex gap-2 mt-1 ml-1">
                     <span className="text-[9px] text-rambo-amber">Action: {msg.action}</span>
-                    <span className="text-[9px] text-rambo-purple">Tag: {msg.tag}</span>
                   </div>
                 )}
               </div>
@@ -375,7 +474,7 @@ export default function Builder() {
                 value={chatInput}
                 onChange={e => setChatInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder="Type as lead..."
+                placeholder="Type as a lead..."
                 className="flex-1 bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-text focus:border-rambo-green focus:outline-none"
               />
               <button
@@ -386,7 +485,7 @@ export default function Builder() {
               </button>
             </div>
             <div className="text-[10px] text-rambo-dim mt-1">
-              Turn: {turnCount} // Scenario: {SCENARIOS[scenario].label}
+              Turn: {turnCount} // Personality: {personality}
             </div>
           </div>
         </aside>
@@ -405,8 +504,8 @@ export default function Builder() {
             </div>
             <div className="border border-rambo-border rounded p-4 mb-4 text-xs text-rambo-text space-y-2">
               <p><span className="text-rambo-green">$&gt;</span> Business: {businessName || 'Not set'}</p>
-              <p><span className="text-rambo-green">$&gt;</span> Audience: {targetAudience || 'Not set'}</p>
               <p><span className="text-rambo-green">$&gt;</span> Personality: {personality}</p>
+              <p><span className="text-rambo-green">$&gt;</span> Questions: {questions.filter(q => q.trim()).length}</p>
               <p><span className="text-rambo-green">$&gt;</span> Chat turns tested: {turnCount}</p>
             </div>
             <p className="text-xs text-rambo-dim mb-4">

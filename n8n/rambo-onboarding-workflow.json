@@ -1,0 +1,295 @@
+{
+  "name": "RAMBO - Auto Onboarding (Stripe → GHL Sub-Account)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "rambo-onboarding",
+        "options": {}
+      },
+      "id": "webhook-stripe",
+      "name": "Stripe Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "webhookId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-type-check",
+              "leftValue": "={{ $json.type }}",
+              "rightValue": "checkout.session.completed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-event",
+      "name": "Filter: checkout.session.completed",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract customer data from Stripe checkout session\nconst event = $input.first().json;\nconst session = event.data?.object || event;\n\nconst customerEmail = session.customer_details?.email || session.customer_email || '';\nconst customerName = session.customer_details?.name || '';\nconst businessName = session.metadata?.business_name || customerName + \"'s Business\";\nconst phone = session.customer_details?.phone || '';\nconst amountPaid = (session.amount_total || 0) / 100;\nconst currency = (session.currency || 'gbp').toUpperCase();\nconst stripeCustomerId = session.customer || '';\nconst stripeSessionId = session.id || '';\n\n// Split name\nconst nameParts = customerName.split(' ');\nconst firstName = nameParts[0] || '';\nconst lastName = nameParts.slice(1).join(' ') || '';\n\nreturn [{\n  json: {\n    customerEmail,\n    customerName,\n    firstName,\n    lastName,\n    businessName,\n    phone,\n    amountPaid,\n    currency,\n    stripeCustomerId,\n    stripeSessionId\n  }\n}];"
+      },
+      "id": "extract-data",
+      "name": "Extract Customer Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://services.leadconnectorhq.com/locations/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"companyId\": \"lk6Qi8cYfry2FJNJ2pLU\",\n  \"name\": \"{{ $json.businessName }}\",\n  \"email\": \"{{ $json.customerEmail }}\",\n  \"phone\": \"{{ $json.phone }}\",\n  \"address\": \"\",\n  \"city\": \"\",\n  \"state\": \"\",\n  \"country\": \"GB\",\n  \"postalCode\": \"\",\n  \"timezone\": \"Europe/London\",\n  \"settings\": {\n    \"allowDuplicateContact\": false,\n    \"allowDuplicateOpportunity\": false,\n    \"allowFacebookNameMerge\": true\n  }\n}",
+        "options": {}
+      },
+      "id": "create-ghl-location",
+      "name": "Create GHL Sub-Account",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "GHL Agency API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge customer data with new location data\nconst customerData = $('Extract Customer Data').first().json;\nconst locationResponse = $input.first().json;\n\nconst locationId = locationResponse.id || locationResponse.location?.id || 'UNKNOWN';\nconst locationName = locationResponse.name || locationResponse.location?.name || customerData.businessName;\n\nreturn [{\n  json: {\n    ...customerData,\n    locationId,\n    locationName,\n    createdAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "merge-data",
+      "name": "Merge Location + Customer Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://services.leadconnectorhq.com/locations/{{ $json.locationId }}/pipelines",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"name\": \"RAMBO Lead Pipeline\",\n  \"stages\": [\n    { \"name\": \"New Lead\", \"position\": 0 },\n    { \"name\": \"Qualifying\", \"position\": 1 },\n    { \"name\": \"Appointment Set\", \"position\": 2 },\n    { \"name\": \"Showed\", \"position\": 3 },\n    { \"name\": \"Closed - Won\", \"position\": 4 },\n    { \"name\": \"Closed - Lost\", \"position\": 5 }\n  ]\n}",
+        "options": {}
+      },
+      "id": "create-pipeline",
+      "name": "Create Default Pipeline",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 180],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "GHL Agency API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://services.leadconnectorhq.com/locations/{{ $json.locationId }}/tags",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"tags\": [\n    \"rambo-lead\",\n    \"price-shopper\",\n    \"curious\",\n    \"busy-lead\",\n    \"unqualified\",\n    \"appointment-set\",\n    \"no-show\",\n    \"follow-up-needed\",\n    \"reactivation\"\n  ]\n}",
+        "options": {}
+      },
+      "id": "create-tags",
+      "name": "Create Default Tags",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 420],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "GHL Agency API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "SLACK_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"*RAMBO - New Client Onboarded*\\n\\n*Business:* {{ $json.businessName }}\\n*Name:* {{ $json.customerName }}\\n*Email:* {{ $json.customerEmail }}\\n*Paid:* {{ $json.currency }} {{ $json.amountPaid }}\\n*GHL Location ID:* {{ $json.locationId }}\\n*Stripe Session:* {{ $json.stripeSessionId }}\\n\\nSub-account created. Pipeline + tags configured. Ready for onboarding call - just needs socials connected.\"\n}",
+        "options": {}
+      },
+      "id": "slack-notify",
+      "name": "Slack: Notify Kevin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.resend.com/emails",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer re_ZVFh2QhZ_j4zDVwWFELCALD3kaqr8e4t5"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from\": \"RAMBO <onboarding@flowstatesystems.ai>\",\n  \"to\": [\"{{ $json.customerEmail }}\"],\n  \"subject\": \"You're in. RAMBO is being deployed.\",\n  \"html\": \"<div style='font-family: monospace; background: #0a0a0f; color: #c0c0d0; padding: 40px; max-width: 600px;'><h1 style='color: #39ff14; font-size: 28px;'>RAMBO ACTIVATED</h1><p>Hey {{ $json.firstName }},</p><p>Your AI setter is being configured right now. Your GHL account for <strong>{{ $json.businessName }}</strong> is live and ready.</p><p>Here's what happens next:</p><ul style='color: #c0c0d0;'><li>Your onboarding call is where we connect your socials (Instagram, Facebook, etc.)</li><li>We'll walk through your AI setter personality and qualifying questions</li><li>You'll be live and booking appointments within 24 hours of the call</li></ul><p>If you haven't booked your onboarding call yet, reply to this email and we'll get you sorted.</p><p style='color: #39ff14;'>-- RAMBO // Flowstate Systems</p></div>\"\n}",
+        "options": {}
+      },
+      "id": "send-welcome-email",
+      "name": "Email: Welcome Client",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 420]
+    }
+  ],
+  "connections": {
+    "Stripe Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter: checkout.session.completed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter: checkout.session.completed": {
+      "main": [
+        [
+          {
+            "node": "Extract Customer Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Customer Data": {
+      "main": [
+        [
+          {
+            "node": "Create GHL Sub-Account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create GHL Sub-Account": {
+      "main": [
+        [
+          {
+            "node": "Merge Location + Customer Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Location + Customer Data": {
+      "main": [
+        [
+          {
+            "node": "Create Default Pipeline",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create Default Tags",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Default Pipeline": {
+      "main": [
+        [
+          {
+            "node": "Slack: Notify Kevin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Default Tags": {
+      "main": [
+        [
+          {
+            "node": "Email: Welcome Client",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "name": "RAMBO"
+    }
+  ]
+}

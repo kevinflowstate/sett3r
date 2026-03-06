@@ -1,0 +1,182 @@
+{
+  "name": "SETT3R - Lead Reactivation (30/60/90 Day)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "cron-daily",
+      "name": "Daily 10am (Mon-Fri)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Define which locations to check and their PIT tokens\n// REPLACE these with actual location IDs and tokens when hooking up\nconst locations = [\n  // { id: 'LOCATION_ID_1', name: 'Client Name', token: 'pit-xxx' },\n  // { id: 'LOCATION_ID_2', name: 'Client Name', token: 'pit-xxx' },\n];\n\n// Calculate date thresholds\nconst now = new Date();\nconst day30 = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();\nconst day60 = new Date(now - 60 * 24 * 60 * 60 * 1000).toISOString();\nconst day90 = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString();\n\n// For now, output the config so it's ready to wire up\nreturn [{\n  json: {\n    locations,\n    thresholds: {\n      day30,\n      day60,\n      day90\n    },\n    maxPerDay: 10,\n    dryRun: true\n  }\n}];"
+      },
+      "id": "config",
+      "name": "Config: Locations + Thresholds",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Query GHL contacts for stale leads\n// This node searches each location for contacts that:\n// - Have NOT been contacted in 30/60/90 days\n// - Are tagged as curious, price_shopper, or similar\n// - Are NOT tagged as appointment-set, closed-won, or do-not-contact\n// - Have NOT already been reactivated in this cycle\n\nconst config = $input.first().json;\nconst results = [];\n\nfor (const location of config.locations) {\n  // Search contacts via GHL API\n  // In production, use this.helpers.httpRequest() for each location\n  // For now, build the query structure\n  \n  const searchPayload = {\n    locationId: location.id,\n    filters: [\n      {\n        field: 'tags',\n        operator: 'contains',\n        value: ['curious', 'price_shopper', 'busy_lead']\n      },\n      {\n        field: 'tags',\n        operator: 'not_contains',\n        value: ['appointment-set', 'closed-won', 'do-not-contact', 'reactivation-sent']\n      }\n    ],\n    pageLimit: config.maxPerDay\n  };\n\n  results.push({\n    location: location.name,\n    locationId: location.id,\n    token: location.token,\n    searchPayload,\n    threshold: config.thresholds\n  });\n}\n\nif (results.length === 0) {\n  // No locations configured yet - output placeholder\n  results.push({\n    location: 'NOT_CONFIGURED',\n    locationId: '',\n    note: 'Add location IDs and PIT tokens to the Config node to activate'\n  });\n}\n\nreturn results.map(r => ({ json: r }));"
+      },
+      "id": "find-stale-leads",
+      "name": "Find Stale Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build reactivation messages based on how long since last contact\n// 30 days = soft check-in\n// 60 days = value reminder\n// 90 days = last chance / door closing\n\nconst data = $input.first().json;\n\nif (!data.locationId || data.location === 'NOT_CONFIGURED') {\n  return [{ json: { skip: true, reason: 'No locations configured' } }];\n}\n\n// Message templates by tier\nconst messages = {\n  day30: [\n    'Hey {{firstName}}, we chatted a while back about {{businessGoal}}. Still something you\\'re thinking about? Happy to pick up where we left off.',\n    'Hey {{firstName}}, just checking in - you mentioned you were interested in {{businessGoal}} last month. Anything changed? No pressure either way.',\n  ],\n  day60: [\n    'Hey {{firstName}}, it\\'s been a couple of months since we last spoke. A few spots have opened up if you\\'re still interested in {{businessGoal}}. Want me to grab you one?',\n    'Hey {{firstName}}, circling back on this - we\\'ve had some great results recently with people in a similar position to you. Worth a quick chat if you\\'re still thinking about it?',\n  ],\n  day90: [\n    'Hey {{firstName}}, last check-in from me on this. If the timing\\'s not right, totally understand. But if {{businessGoal}} is still on your radar, I can get you sorted this week. Just say the word.',\n    'Hey {{firstName}}, I know it\\'s been a while. If things have changed and this isn\\'t for you anymore, no worries at all. But if you\\'re still interested, the offer\\'s still there. Reply and I\\'ll sort a time.',\n  ]\n};\n\n// Pick a random message from the appropriate tier\nconst tier = 'day30'; // Will be dynamic based on actual last contact date\nconst tierMessages = messages[tier];\nconst message = tierMessages[Math.floor(Math.random() * tierMessages.length)];\n\nreturn [{\n  json: {\n    ...data,\n    reactivationTier: tier,\n    messageTemplate: message,\n    tagsToAdd: ['reactivation-sent', `reactivation-${tier}`]\n  }\n}];"
+      },
+      "id": "build-reactivation",
+      "name": "Build Reactivation Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "skip-check",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-skip",
+      "name": "Filter: Skip Unconfigured",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// In production: send via GHL conversation API\n// For now: log what WOULD be sent\n\nconst data = $input.first().json;\nconst dryRun = true; // Set to false when ready to go live\n\nif (dryRun) {\n  return [{\n    json: {\n      ...data,\n      action: 'DRY_RUN',\n      wouldSend: data.messageTemplate,\n      note: 'Set dryRun=false in Config node to send real messages'\n    }\n  }];\n}\n\n// Production send:\n// const response = await this.helpers.httpRequest({\n//   method: 'POST',\n//   url: 'https://services.leadconnectorhq.com/conversations/messages',\n//   headers: {\n//     'Authorization': `Bearer ${data.token}`,\n//     'Version': '2021-07-28',\n//     'Content-Type': 'application/json'\n//   },\n//   body: {\n//     type: 'SMS',\n//     contactId: data.contactId,\n//     message: data.messageTemplate\n//   }\n// });\n\nreturn [{ json: { ...data, sent: true } }];"
+      },
+      "id": "send-or-dryrun",
+      "name": "Send or Dry Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "SLACK_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"*SETT3R - Lead Reactivation*\\n*Location:* {{ $json.location }}\\n*Tier:* {{ $json.reactivationTier }}\\n*Action:* {{ $json.action || 'SENT' }}\\n*Message:* {{ $json.messageTemplate || $json.wouldSend || 'N/A' }}\\n\\nIf they reply, the DM bot handles the conversation.\"\n}",
+        "options": {}
+      },
+      "id": "slack-reactivation",
+      "name": "Slack: Reactivation Log",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 300]
+    }
+  ],
+  "connections": {
+    "Daily 10am (Mon-Fri)": {
+      "main": [
+        [
+          {
+            "node": "Config: Locations + Thresholds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config: Locations + Thresholds": {
+      "main": [
+        [
+          {
+            "node": "Find Stale Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Stale Leads": {
+      "main": [
+        [
+          {
+            "node": "Build Reactivation Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Reactivation Message": {
+      "main": [
+        [
+          {
+            "node": "Filter: Skip Unconfigured",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter: Skip Unconfigured": {
+      "main": [
+        [
+          {
+            "node": "Send or Dry Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send or Dry Run": {
+      "main": [
+        [
+          {
+            "node": "Slack: Reactivation Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "SETT3R"
+    }
+  ]
+}

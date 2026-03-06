@@ -1,0 +1,238 @@
+{
+  "name": "SETT3R - No-Show Chaser",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sett3r-noshow",
+        "options": {}
+      },
+      "id": "webhook-noshow",
+      "name": "GHL Appointment Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [220, 300],
+      "webhookId": "b2c3d4e5-f6a7-8901-bcde-f23456789012"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "filter-noshow",
+              "leftValue": "={{ $json.body?.status || $json.status }}",
+              "rightValue": "no_show",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "filter-status",
+      "name": "Filter: No-Show or Cancelled",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract appointment + contact data from GHL webhook\nconst data = $input.first().json;\nconst body = data.body || data;\n\nconst contactId = body.contactId || body.contact_id || '';\nconst contactName = body.contactName || body.contact?.name || body.first_name || 'there';\nconst contactPhone = body.contactPhone || body.contact?.phone || '';\nconst contactEmail = body.contactEmail || body.contact?.email || '';\nconst locationId = body.locationId || body.location_id || '';\nconst appointmentId = body.id || body.appointmentId || '';\nconst calendarName = body.calendarName || body.calendar?.name || 'your appointment';\nconst appointmentTime = body.startTime || body.start_time || '';\nconst status = body.status || 'no_show';\n\n// Format the time nicely if available\nlet timeStr = '';\nif (appointmentTime) {\n  try {\n    const d = new Date(appointmentTime);\n    timeStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });\n  } catch(e) {\n    timeStr = '';\n  }\n}\n\nreturn [{\n  json: {\n    contactId,\n    contactName,\n    contactPhone,\n    contactEmail,\n    locationId,\n    appointmentId,\n    calendarName,\n    appointmentTime: timeStr,\n    status,\n    chaseAt: new Date(Date.now() + 10 * 60 * 1000).toISOString()\n  }\n}];"
+      },
+      "id": "extract-noshow",
+      "name": "Extract Appointment Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "minutes"
+      },
+      "id": "delay-10min",
+      "name": "Wait 10 Minutes",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the chase message - varies by attempt\nconst data = $input.first().json;\nconst name = data.contactName || 'there';\nconst firstName = name.split(' ')[0];\nconst time = data.appointmentTime;\n\n// Friendly, not guilt-trippy\nconst messages = [\n  `Hey ${firstName}, noticed you couldn't make it${time ? ' on ' + time : ''} - no stress at all. Want me to rebook you for another day this week?`,\n  `Hey ${firstName}, just following up - life gets busy, I get it. If you still want to get booked in, I can find you a new slot. Just say the word.`,\n  `Hey ${firstName}, last one from me on this - if the timing wasn't right, no worries. The door's always open when you're ready. Just reply and I'll sort a new time.`\n];\n\n// Default to first message (chase #1)\nconst message = messages[0];\n\nreturn [{\n  json: {\n    ...data,\n    chaseMessage: message,\n    chaseNumber: 1\n  }\n}];"
+      },
+      "id": "build-message",
+      "name": "Build Chase Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://services.leadconnectorhq.com/conversations/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"type\": \"SMS\",\n  \"contactId\": \"{{ $json.contactId }}\",\n  \"message\": \"{{ $json.chaseMessage }}\"\n}",
+        "options": {}
+      },
+      "id": "send-chase",
+      "name": "Send Chase via GHL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "GHL Agency API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{ $json.contactId }}/tags",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2021-07-28"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"tags\": [\"no-show\", \"chase-sent\"]\n}",
+        "options": {}
+      },
+      "id": "tag-contact",
+      "name": "Tag: no-show + chase-sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 400],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_WITH_CREDENTIAL_ID",
+          "name": "GHL Agency API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "SLACK_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"text\": \"*SETT3R - No-Show Chased*\\n*Contact:* {{ $json.contactName }}\\n*Appointment:* {{ $json.calendarName }} {{ $json.appointmentTime }}\\n*Location:* {{ $json.locationId }}\\n*Chase #:* {{ $json.chaseNumber }}\\nMessage sent. If they reply, the DM bot will handle it.\"\n}",
+        "options": {}
+      },
+      "id": "slack-noshow",
+      "name": "Slack: Notify Kevin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1540, 300]
+    }
+  ],
+  "connections": {
+    "GHL Appointment Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter: No-Show or Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter: No-Show or Cancelled": {
+      "main": [
+        [
+          {
+            "node": "Extract Appointment Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Appointment Data": {
+      "main": [
+        [
+          {
+            "node": "Wait 10 Minutes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 10 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Build Chase Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Chase Message": {
+      "main": [
+        [
+          {
+            "node": "Send Chase via GHL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Tag: no-show + chase-sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Chase via GHL": {
+      "main": [
+        [
+          {
+            "node": "Slack: Notify Kevin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "SETT3R"
+    }
+  ]
+}

@@ -37,6 +37,14 @@ Never say:
 ${banned.map(b => `- "${b}"`).join('\n')}` : ''}`
 }
 
+const DEFAULT_FOLLOWUPS = [
+  { delay: '2 hours', message: "Hey {{firstName}}, just following up - did you get a chance to think about what we discussed? Happy to answer any questions." },
+  { delay: '24 hours', message: "Hey {{firstName}}, just a quick nudge on this. If you're still interested, I can get you booked in for a quick call this week. No pressure either way." },
+  { delay: '3 days', message: "Last one from me on this {{firstName}} - if the timing isn't right, totally understand. But if you'd still like to chat, just reply and I'll sort a time." },
+]
+
+const DELAY_OPTIONS = ['30 mins', '1 hour', '2 hours', '4 hours', '12 hours', '24 hours', '2 days', '3 days', '5 days', '7 days']
+
 const DEFAULT_NEVER_SAY = `"You're a rockstar!"
 "Totally amazeballs!"
 "Just circle back on that"
@@ -149,6 +157,7 @@ export default function Builder() {
   const [targetAudience, setTargetAudience] = useState('')
   const [personality, setPersonality] = useState('Direct')
   const [questions, setQuestions] = useState(DEFAULT_QUESTIONS)
+  const [followups, setFollowups] = useState(DEFAULT_FOLLOWUPS)
   const [neverSay, setNeverSay] = useState(DEFAULT_NEVER_SAY)
   const [jsonPreview, setJsonPreview] = useState(null)
   const [saved, setSaved] = useState(false)
@@ -167,6 +176,7 @@ export default function Builder() {
     { label: 'Target audience', done: targetAudience.length > 10 },
     { label: 'Personality selected', done: !!personality },
     { label: 'Qualifying questions', done: questions.some(q => q.trim()) },
+    { label: 'Follow-ups configured', done: followups.some(f => f.message.trim()) },
     { label: 'Never say configured', done: neverSay.trim().length > 0 },
     { label: 'Config generated', done: !!jsonPreview },
     { label: 'Chat tested (3+ turns)', done: turnCount >= 3 },
@@ -178,11 +188,12 @@ export default function Builder() {
     if (targetAudience.length > 10) s += 15
     if (personality) s += 10
     if (questions.some(q => q.trim())) s += 10
+    if (followups.some(f => f.message.trim())) s += 5
     if (neverSay.trim().length > 0) s += 5
     if (jsonPreview) s += 20
     s += Math.min(turnCount * 5, 25)
     setScore(Math.min(s, 100))
-  }, [businessName, targetAudience, personality, questions, neverSay, jsonPreview, turnCount])
+  }, [businessName, targetAudience, personality, questions, followups, neverSay, jsonPreview, turnCount])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -201,8 +212,8 @@ export default function Builder() {
       personality,
       qualifying_questions: questions.filter(q => q.trim()),
       never_say: neverSay.split('\n').map(s => s.replace(/^["']|["']$/g, '').trim()).filter(Boolean),
+      followups: followups.filter(f => f.message.trim()).map(f => ({ delay: f.delay, message: f.message })),
       channels: ['instagram_dm', 'sms'],
-      max_followups: 5,
       booking_integration: 'calendly',
       prompt_hash: btoa(generatedPrompt).slice(0, 12),
       created: new Date().toISOString(),
@@ -241,6 +252,18 @@ export default function Builder() {
 
   function removeQuestion(idx) {
     if (questions.length > 1) setQuestions(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  function updateFollowup(idx, field, value) {
+    setFollowups(prev => prev.map((f, i) => i === idx ? { ...f, [field]: value } : f))
+  }
+
+  function addFollowup() {
+    if (followups.length < 5) setFollowups(prev => [...prev, { delay: '24 hours', message: '' }])
+  }
+
+  function removeFollowup(idx) {
+    if (followups.length > 1) setFollowups(prev => prev.filter((_, i) => i !== idx))
   }
 
   return (
@@ -386,6 +409,54 @@ export default function Builder() {
                 placeholder={`"You're a rockstar!"\n"Totally amazeballs!"\n"Let's touch base"`}
                 className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-text focus:border-rambo-green focus:outline-none transition-colors leading-relaxed resize-y"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs text-rambo-dim mb-2">FOLLOW-UPS</label>
+              <p className="text-[10px] text-rambo-dim mb-2">If a lead goes quiet, SETT3R sends these automatically. Use {"{{firstName}}"} to personalise.</p>
+              <div className="space-y-3">
+                {followups.map((f, i) => (
+                  <div key={i} className="border border-rambo-border rounded p-3 bg-rambo-bg/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-rambo-green text-xs">#{i + 1}</span>
+                      <span className="text-[10px] text-rambo-dim">Send after</span>
+                      <select
+                        value={f.delay}
+                        onChange={e => updateFollowup(i, 'delay', e.target.value)}
+                        className="bg-rambo-bg border border-rambo-border rounded px-2 py-1 text-xs text-rambo-text focus:border-rambo-green focus:outline-none cursor-pointer"
+                      >
+                        {DELAY_OPTIONS.map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                      <span className="text-[10px] text-rambo-dim">of no reply</span>
+                      {followups.length > 1 && (
+                        <button
+                          onClick={() => removeFollowup(i)}
+                          className="ml-auto text-rambo-dim hover:text-rambo-red text-xs cursor-pointer px-1"
+                        >
+                          x
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      value={f.message}
+                      onChange={e => updateFollowup(i, 'message', e.target.value)}
+                      rows={2}
+                      placeholder="e.g. Hey {{firstName}}, just checking in - still interested?"
+                      className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-1.5 text-xs text-rambo-text focus:border-rambo-green focus:outline-none leading-relaxed resize-y"
+                    />
+                  </div>
+                ))}
+              </div>
+              {followups.length < 5 && (
+                <button
+                  onClick={addFollowup}
+                  className="mt-2 text-[10px] text-rambo-green hover:text-rambo-green/80 cursor-pointer"
+                >
+                  + Add follow-up
+                </button>
+              )}
             </div>
 
             <div>

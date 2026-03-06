@@ -18,10 +18,13 @@ export default function SettrDemo() {
   const [isStreaming, setIsStreaming] = useState(false)
   const [msgCount, setMsgCount] = useState(0)
   const chatEndRef = useRef(null)
+  const scrollRef = useRef(null)
   const inputRef = useRef(null)
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+    }
   }, [messages])
 
   async function sendMessage(text) {
@@ -141,7 +144,7 @@ export default function SettrDemo() {
           </div>
 
           {/* Messages area */}
-          <div className="min-h-[400px] max-h-[500px] overflow-y-auto p-6 space-y-4">
+          <div ref={scrollRef} className="min-h-[400px] max-h-[500px] overflow-y-auto p-6 space-y-4">
             {messages.length === 0 && (
               <div className="flex flex-col items-center justify-center h-[360px] gap-6">
                 <SettrAvatar size={56} />

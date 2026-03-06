@@ -13,7 +13,7 @@ KEY FACTS:
 - Promo code BETA waives setup fees.
 - Response time: under 5 seconds. Always.
 - Works with any service business that books appointments - salons, clinics, trades, professional services, coaches, etc.
-- Built on GoHighLevel CRM. Account created automatically on signup.
+- CRM account created automatically on signup. Includes pipeline, tags, and calendar.
 - 15-minute onboarding call, live same day. No tech skills needed.
 - If SETT3R can't handle a conversation, it escalates to the business owner with full context.
 - No contracts. Month-to-month. Cancel anytime.

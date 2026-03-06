@@ -10,15 +10,32 @@ const DEFAULT_QUESTIONS = [
   "What's your timeline - are you looking to start soon?",
 ]
 
-const DEFAULT_PROMPT = `You are an AI appointment setter for {{business_name}}.
-Your personality is {{personality}}.
+function buildPrompt(businessName, targetAudience, personality, questions, neverSay) {
+  const biz = businessName || '[Business Name]'
+  const audience = targetAudience || '[Target Audience]'
+  const tone = personality || 'Direct'
+  const qs = questions.filter(q => q.trim())
+  const banned = neverSay.split('\n').map(s => s.replace(/^["']|["']$/g, '').trim()).filter(Boolean)
+
+  return `You are an AI appointment setter for ${biz}.
+Your personality is ${tone}.
 Your goal: qualify leads and book them into a consultation.
+
+About the business:
+${audience}
 
 Rules:
 - Never be pushy. Mirror their energy.
-- Ask max 3 qualifying questions before offering a booking.
+- Ask max ${qs.length} qualifying question${qs.length !== 1 ? 's' : ''} before offering a booking.
 - If unqualified, gracefully exit and tag appropriately.
-- Always confirm date/time before booking.`
+- Always confirm date/time before booking.
+
+Qualifying questions:
+${qs.map((q, i) => `${i + 1}. ${q}`).join('\n')}${banned.length > 0 ? `
+
+Never say:
+${banned.map(b => `- "${b}"`).join('\n')}` : ''}`
+}
 
 const DEFAULT_NEVER_SAY = `"You're a rockstar!"
 "Totally amazeballs!"
@@ -133,9 +150,10 @@ export default function Builder() {
   const [personality, setPersonality] = useState('Direct')
   const [questions, setQuestions] = useState(DEFAULT_QUESTIONS)
   const [neverSay, setNeverSay] = useState(DEFAULT_NEVER_SAY)
-  const [prompt, setPrompt] = useState(DEFAULT_PROMPT)
   const [jsonPreview, setJsonPreview] = useState(null)
   const [saved, setSaved] = useState(false)
+
+  const generatedPrompt = buildPrompt(businessName, targetAudience, personality, questions, neverSay)
 
   const [chatInput, setChatInput] = useState('')
   const [messages, setMessages] = useState([])
@@ -148,23 +166,23 @@ export default function Builder() {
     { label: 'Business name', done: businessName.length > 2 },
     { label: 'Target audience', done: targetAudience.length > 10 },
     { label: 'Personality selected', done: !!personality },
-    { label: 'Qualifying questions', done: questions.some(q => q !== DEFAULT_QUESTIONS[0]) || questions.length !== 3 },
-    { label: 'Prompt configured', done: prompt !== DEFAULT_PROMPT },
+    { label: 'Qualifying questions', done: questions.some(q => q.trim()) },
+    { label: 'Never say configured', done: neverSay.trim().length > 0 },
     { label: 'Config generated', done: !!jsonPreview },
     { label: 'Chat tested (3+ turns)', done: turnCount >= 3 },
   ]
 
   useEffect(() => {
     let s = 0
-    if (businessName.length > 2) s += 10
+    if (businessName.length > 2) s += 15
     if (targetAudience.length > 10) s += 15
     if (personality) s += 10
-    if (questions.some(q => q !== DEFAULT_QUESTIONS[0]) || questions.length !== 3) s += 10
-    if (prompt !== DEFAULT_PROMPT) s += 10
+    if (questions.some(q => q.trim())) s += 10
+    if (neverSay.trim().length > 0) s += 5
     if (jsonPreview) s += 20
     s += Math.min(turnCount * 5, 25)
     setScore(Math.min(s, 100))
-  }, [businessName, targetAudience, personality, questions, prompt, jsonPreview, turnCount])
+  }, [businessName, targetAudience, personality, questions, neverSay, jsonPreview, turnCount])
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -186,7 +204,7 @@ export default function Builder() {
       channels: ['instagram_dm', 'sms'],
       max_followups: 5,
       booking_integration: 'calendly',
-      prompt_hash: btoa(prompt).slice(0, 12),
+      prompt_hash: btoa(generatedPrompt).slice(0, 12),
       created: new Date().toISOString(),
     }
     setJsonPreview(config)
@@ -371,13 +389,9 @@ export default function Builder() {
             </div>
 
             <div>
-              <label className="block text-xs text-rambo-dim mb-1">SYSTEM PROMPT</label>
-              <textarea
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                rows={8}
-                className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-text focus:border-rambo-green focus:outline-none transition-colors leading-relaxed resize-y"
-              />
+              <label className="block text-xs text-rambo-dim mb-1">GENERATED PROMPT PREVIEW</label>
+              <p className="text-[10px] text-rambo-dim mb-2">This builds automatically from your inputs above. This is what SETT3R uses to respond.</p>
+              <pre className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-green/80 leading-relaxed whitespace-pre-wrap">{generatedPrompt}</pre>
             </div>
 
             <div className="flex gap-3">

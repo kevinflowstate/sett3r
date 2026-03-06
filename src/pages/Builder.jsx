@@ -82,7 +82,6 @@ function generateReply(personality, businessName, questions, message, turnCount,
     Luxury: `Welcome. You've connected with ${biz}. Let's see if we're the right fit.`,
   }
 
-  // First message always gets a greeting
   if (turnCount === 0) {
     const q = questions[0] || "What's the main goal you're looking to achieve?"
     return {
@@ -91,7 +90,6 @@ function generateReply(personality, businessName, questions, message, turnCount,
     }
   }
 
-  // Price intent
   if (intent === 'price') {
     return {
       text: `Totally get it - price matters. Before I throw numbers at you though, can I ask what you're actually looking to achieve? That way I can tell you exactly what you'd get for the investment.`,
@@ -99,7 +97,6 @@ function generateReply(personality, businessName, questions, message, turnCount,
     }
   }
 
-  // Busy / short replies
   if (intent === 'busy') {
     return {
       text: `No worries, I'll keep it quick. The easiest next step is a 15-min call with ${biz} - no pressure, just a quick chat to see if we can help. Want me to find you a slot?`,
@@ -107,7 +104,6 @@ function generateReply(personality, businessName, questions, message, turnCount,
     }
   }
 
-  // Cold / not interested
   if (intent === 'cold') {
     return {
       text: `Completely understand - no pressure at all. If anything changes or you want to pick this up later, just message back anytime. The door's always open.`,
@@ -115,7 +111,6 @@ function generateReply(personality, businessName, questions, message, turnCount,
     }
   }
 
-  // Booking intent
   if (intent === 'booking') {
     return {
       text: `Brilliant - let's get you sorted. I can book you in for a quick 15-minute discovery call with ${biz}. What day works best for you this week?`,
@@ -123,7 +118,6 @@ function generateReply(personality, businessName, questions, message, turnCount,
     }
   }
 
-  // Curious / wants info
   if (intent === 'curious') {
     const q = questions[Math.min(turnCount, questions.length - 1)] || "What's your timeline - are you looking to start soon?"
     return {
@@ -132,7 +126,6 @@ function generateReply(personality, businessName, questions, message, turnCount,
     }
   }
 
-  // General / follow-up - cycle through qualifying questions
   if (turnCount <= questions.length) {
     const qIdx = Math.min(turnCount, questions.length - 1)
     const q = questions[qIdx]
@@ -142,7 +135,6 @@ function generateReply(personality, businessName, questions, message, turnCount,
     }
   }
 
-  // Past qualifying questions - push toward booking
   return {
     text: `Based on everything you've told me, I think we can definitely help. The best next step is a quick 15-min call with ${biz}. Want me to get you booked in?`,
     action: 'offer_booking',
@@ -162,6 +154,7 @@ export default function Builder() {
   const [jsonPreview, setJsonPreview] = useState(null)
   const [saved, setSaved] = useState(false)
 
+  const [activeView, setActiveView] = useState('config') // 'config' | 'test'
   const generatedPrompt = buildPrompt(businessName, targetAudience, personality, questions, neverSay)
 
   const [chatInput, setChatInput] = useState('')
@@ -226,6 +219,14 @@ export default function Builder() {
     setTimeout(() => setSaved(false), 3000)
   }
 
+  function handleTestClick() {
+    if (!jsonPreview) {
+      alert('Generate your config first before testing. Fill in your details and hit "Generate Config".')
+      return
+    }
+    setActiveView('test')
+  }
+
   function handleSend() {
     if (!chatInput.trim()) return
     const userMsg = { role: 'user', text: chatInput }
@@ -280,10 +281,37 @@ export default function Builder() {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-[260px_1fr_380px] overflow-hidden">
-        {/* LEFT */}
+      <div className="flex-1 grid grid-cols-[260px_1fr] overflow-hidden">
+        {/* LEFT SIDEBAR */}
         <aside className="border-r border-rambo-border p-4 overflow-y-auto bg-rambo-card/30">
-          <h2 className="text-rambo-green text-xs tracking-widest mb-4 uppercase">Build Steps</h2>
+          <h2 className="text-rambo-green text-xs tracking-widest mb-4 uppercase">Navigation</h2>
+
+          <div className="space-y-1 mb-6">
+            <button
+              onClick={() => setActiveView('config')}
+              className={`w-full text-left px-3 py-2 rounded text-xs transition-colors cursor-pointer ${
+                activeView === 'config'
+                  ? 'bg-rambo-green/10 text-rambo-green border border-rambo-green/30'
+                  : 'text-rambo-dim hover:text-rambo-text hover:bg-rambo-card/50'
+              }`}
+            >
+              Configure Setter
+            </button>
+            <button
+              onClick={handleTestClick}
+              className={`w-full text-left px-3 py-2 rounded text-xs transition-colors cursor-pointer flex items-center justify-between ${
+                activeView === 'test'
+                  ? 'bg-rambo-green/10 text-rambo-green border border-rambo-green/30'
+                  : 'text-rambo-dim hover:text-rambo-text hover:bg-rambo-card/50'
+              }`}
+            >
+              Test Your SETT3R
+              {!jsonPreview && <span className="w-1.5 h-1.5 rounded-full bg-rambo-border" title="Generate config first" />}
+              {jsonPreview && <span className="w-1.5 h-1.5 rounded-full bg-rambo-green" />}
+            </button>
+          </div>
+
+          <h2 className="text-rambo-green text-xs tracking-widest mb-3 uppercase">Build Steps</h2>
           <ul className="space-y-2">
             {steps.map((step, i) => (
               <li key={i} className="flex items-center gap-2 text-xs">
@@ -318,262 +346,280 @@ export default function Builder() {
           </p>
         </aside>
 
-        {/* MIDDLE */}
-        <main className="p-6 overflow-y-auto">
-          <h2 className="text-rambo-green text-xs tracking-widest mb-4 uppercase">Configure Setter</h2>
+        {/* MAIN AREA */}
+        {activeView === 'config' ? (
+          <main className="p-6 overflow-y-auto">
+            <h2 className="text-rambo-green text-xs tracking-widest mb-4 uppercase">Configure Setter</h2>
 
-          <div className="space-y-5 max-w-xl">
-            <div>
-              <label className="block text-xs text-rambo-dim mb-1">BUSINESS NAME</label>
-              <input
-                type="text"
-                value={businessName}
-                onChange={e => setBusinessName(e.target.value)}
-                placeholder="e.g. Peak Performance Studio"
-                className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-sm text-rambo-text focus:border-rambo-green focus:outline-none transition-colors"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-rambo-dim mb-1">ABOUT YOUR BUSINESS & AUDIENCE</label>
-              <textarea
-                value={targetAudience}
-                onChange={e => setTargetAudience(e.target.value)}
-                rows={5}
-                placeholder="Tell us everything about your business & who you sell to. The more detail, the better SETT3R performs. What do you offer? Who's your ideal client? What problems do you solve?"
-                className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-sm text-rambo-text focus:border-rambo-green focus:outline-none transition-colors leading-relaxed resize-y"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-rambo-dim mb-2">PERSONALITY</label>
-              <div className="flex flex-wrap gap-2">
-                {PERSONALITIES.map(p => (
-                  <button
-                    key={p}
-                    onClick={() => setPersonality(p)}
-                    className={`px-3 py-1 rounded text-xs border transition-all duration-200 cursor-pointer ${
-                      personality === p
-                        ? 'border-rambo-green bg-rambo-green/10 text-rambo-green'
-                        : 'border-rambo-border text-rambo-dim hover:border-rambo-dim'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
+            <div className="space-y-5 max-w-2xl">
+              <div>
+                <label className="block text-xs text-rambo-dim mb-1">BUSINESS NAME</label>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={e => setBusinessName(e.target.value)}
+                  placeholder="e.g. Peak Performance Studio"
+                  className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-sm text-rambo-text focus:border-rambo-green focus:outline-none transition-colors"
+                />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs text-rambo-dim mb-2">QUALIFYING QUESTIONS</label>
-              <p className="text-[10px] text-rambo-dim mb-2">SETT3R asks these before offering a booking. Drag to reorder.</p>
-              <div className="space-y-2">
-                {questions.map((q, i) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <span className="text-rambo-green text-xs w-4">{i + 1}.</span>
-                    <input
-                      type="text"
-                      value={q}
-                      onChange={e => updateQuestion(i, e.target.value)}
-                      placeholder="e.g. What's your main goal?"
-                      className="flex-1 bg-rambo-bg border border-rambo-border rounded px-3 py-1.5 text-xs text-rambo-text focus:border-rambo-green focus:outline-none"
-                    />
-                    {questions.length > 1 && (
-                      <button
-                        onClick={() => removeQuestion(i)}
-                        className="text-rambo-dim hover:text-rambo-red text-xs cursor-pointer px-1"
-                      >
-                        x
-                      </button>
-                    )}
-                  </div>
-                ))}
+              <div>
+                <label className="block text-xs text-rambo-dim mb-1">ABOUT YOUR BUSINESS & AUDIENCE</label>
+                <textarea
+                  value={targetAudience}
+                  onChange={e => setTargetAudience(e.target.value)}
+                  rows={5}
+                  placeholder="Tell us everything about your business & who you sell to. The more detail, the better SETT3R performs. What do you offer? Who's your ideal client? What problems do you solve?"
+                  className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-sm text-rambo-text focus:border-rambo-green focus:outline-none transition-colors leading-relaxed resize-y"
+                />
               </div>
-              {questions.length < 5 && (
-                <button
-                  onClick={addQuestion}
-                  className="mt-2 text-[10px] text-rambo-green hover:text-rambo-green/80 cursor-pointer"
-                >
-                  + Add question
-                </button>
-              )}
-            </div>
 
-            <div>
-              <label className="block text-xs text-rambo-dim mb-1">NEVER SAY</label>
-              <p className="text-[10px] text-rambo-dim mb-2">Phrases your SETT3R should never use. One per line.</p>
-              <textarea
-                value={neverSay}
-                onChange={e => setNeverSay(e.target.value)}
-                rows={5}
-                placeholder={`"You're a rockstar!"\n"Totally amazeballs!"\n"Let's touch base"`}
-                className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-text focus:border-rambo-green focus:outline-none transition-colors leading-relaxed resize-y"
-              />
-            </div>
+              <div>
+                <label className="block text-xs text-rambo-dim mb-2">PERSONALITY</label>
+                <div className="flex flex-wrap gap-2">
+                  {PERSONALITIES.map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setPersonality(p)}
+                      className={`px-3 py-1 rounded text-xs border transition-all duration-200 cursor-pointer ${
+                        personality === p
+                          ? 'border-rambo-green bg-rambo-green/10 text-rambo-green'
+                          : 'border-rambo-border text-rambo-dim hover:border-rambo-dim'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-xs text-rambo-dim mb-2">FOLLOW-UPS</label>
-              <p className="text-[10px] text-rambo-dim mb-2">If a lead goes quiet, SETT3R sends these automatically. Use {"{{firstName}}"} to personalise.</p>
-              <div className="space-y-3">
-                {followups.map((f, i) => (
-                  <div key={i} className="border border-rambo-border rounded p-3 bg-rambo-bg/50">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-rambo-green text-xs">#{i + 1}</span>
-                      <span className="text-[10px] text-rambo-dim">Send after</span>
-                      <select
-                        value={f.delay}
-                        onChange={e => updateFollowup(i, 'delay', e.target.value)}
-                        className="bg-rambo-bg border border-rambo-border rounded px-2 py-1 text-xs text-rambo-text focus:border-rambo-green focus:outline-none cursor-pointer"
-                      >
-                        {DELAY_OPTIONS.map(d => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-                      <span className="text-[10px] text-rambo-dim">of no reply</span>
-                      {followups.length > 1 && (
+              <div>
+                <label className="block text-xs text-rambo-dim mb-2">QUALIFYING QUESTIONS</label>
+                <p className="text-[10px] text-rambo-dim mb-2">SETT3R asks these before offering a booking.</p>
+                <div className="space-y-2">
+                  {questions.map((q, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <span className="text-rambo-green text-xs w-4">{i + 1}.</span>
+                      <input
+                        type="text"
+                        value={q}
+                        onChange={e => updateQuestion(i, e.target.value)}
+                        placeholder="e.g. What's your main goal?"
+                        className="flex-1 bg-rambo-bg border border-rambo-border rounded px-3 py-1.5 text-xs text-rambo-text focus:border-rambo-green focus:outline-none"
+                      />
+                      {questions.length > 1 && (
                         <button
-                          onClick={() => removeFollowup(i)}
-                          className="ml-auto text-rambo-dim hover:text-rambo-red text-xs cursor-pointer px-1"
+                          onClick={() => removeQuestion(i)}
+                          className="text-rambo-dim hover:text-rambo-red text-xs cursor-pointer px-1"
                         >
                           x
                         </button>
                       )}
                     </div>
-                    <textarea
-                      value={f.message}
-                      onChange={e => updateFollowup(i, 'message', e.target.value)}
-                      rows={2}
-                      placeholder="e.g. Hey {{firstName}}, just checking in - still interested?"
-                      className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-1.5 text-xs text-rambo-text focus:border-rambo-green focus:outline-none leading-relaxed resize-y"
-                    />
-                  </div>
-                ))}
-              </div>
-              {followups.length < 5 && (
-                <button
-                  onClick={addFollowup}
-                  className="mt-2 text-[10px] text-rambo-green hover:text-rambo-green/80 cursor-pointer"
-                >
-                  + Add follow-up
-                </button>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-xs text-rambo-dim mb-1">GENERATED PROMPT PREVIEW</label>
-              <p className="text-[10px] text-rambo-dim mb-2">This builds automatically from your inputs above. This is what SETT3R uses to respond.</p>
-              <pre className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-green/80 leading-relaxed whitespace-pre-wrap">{generatedPrompt}</pre>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={handleGenerate}
-                className="bg-rambo-green text-rambo-bg px-5 py-2 rounded text-xs font-bold tracking-wider hover:shadow-[0_0_15px_#39ff14] transition-all duration-200 cursor-pointer"
-              >
-                GENERATE CONFIG
-              </button>
-              <button
-                onClick={handleSave}
-                className="border border-rambo-border text-rambo-dim px-5 py-2 rounded text-xs tracking-wider hover:border-rambo-green hover:text-rambo-green transition-all duration-200 cursor-pointer"
-              >
-                {saved ? 'SAVED' : 'SAVE DRAFT'}
-              </button>
-            </div>
-
-            {jsonPreview && (
-              <div className="mt-4">
-                <label className="block text-xs text-rambo-dim mb-1">WORKFLOW CONFIG</label>
-                <pre className="bg-rambo-bg border border-rambo-border rounded p-4 text-xs text-rambo-green overflow-x-auto">
-                  {JSON.stringify(jsonPreview, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-        </main>
-
-        {/* RIGHT */}
-        <aside className="border-l border-rambo-border flex flex-col bg-rambo-card/30">
-          <div className="p-4 border-b border-rambo-border flex items-center justify-between">
-            <h2 className="text-rambo-green text-xs tracking-widest uppercase">Chat Simulator</h2>
-            <button
-              onClick={resetChat}
-              className="text-rambo-dim text-[10px] border border-rambo-border px-2 py-1 rounded hover:border-rambo-red hover:text-rambo-red transition-colors cursor-pointer"
-            >
-              RESET
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {messages.length === 0 && (
-              <div className="text-center mt-8">
-                <p className="text-rambo-dim text-xs mb-2">
-                  Type anything a lead might say.
-                </p>
-                <p className="text-rambo-dim text-[10px]">
-                  SETT3R will respond based on your config.
-                </p>
-                <div className="mt-4 space-y-1">
-                  {['"How much is it?"', '"Hey, I saw your post"', '"I\'m interested but busy"', '"What do you offer?"'].map((hint, i) => (
-                    <button
-                      key={i}
-                      onClick={() => { setChatInput(hint.replace(/"/g, '')); }}
-                      className="block mx-auto text-[10px] text-rambo-purple hover:text-rambo-green cursor-pointer transition-colors"
-                    >
-                      {hint}
-                    </button>
                   ))}
                 </div>
-              </div>
-            )}
-            {messages.map((msg, i) => (
-              <div key={i}>
-                <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[85%] rounded px-3 py-2 text-xs leading-relaxed ${
-                    msg.role === 'user'
-                      ? 'bg-rambo-border text-rambo-text'
-                      : 'bg-rambo-green/10 border border-rambo-green/30 text-rambo-text'
-                  }`}>
-                    {msg.role === 'bot' && (
-                      <div className="flex items-center gap-1 mb-1">
-                        <SettrAvatar size={14} />
-                        <span className="text-rambo-green text-[10px] font-bold">SETT3R</span>
-                      </div>
-                    )}
-                    {msg.text}
-                  </div>
-                </div>
-                {msg.role === 'bot' && (
-                  <div className="flex gap-2 mt-1 ml-1">
-                    <span className="text-[9px] text-rambo-amber">Action: {msg.action}</span>
-                  </div>
+                {questions.length < 5 && (
+                  <button
+                    onClick={addQuestion}
+                    className="mt-2 text-[10px] text-rambo-green hover:text-rambo-green/80 cursor-pointer"
+                  >
+                    + Add question
+                  </button>
                 )}
               </div>
-            ))}
-            <div ref={chatEndRef} />
-          </div>
 
-          <div className="p-3 border-t border-rambo-border">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder="Type as a lead..."
-                className="flex-1 bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-text focus:border-rambo-green focus:outline-none"
-              />
-              <button
-                onClick={handleSend}
-                className="bg-rambo-green text-rambo-bg px-4 py-2 rounded text-xs font-bold hover:shadow-[0_0_10px_#39ff14] transition-all cursor-pointer"
-              >
-                SEND
-              </button>
+              <div>
+                <label className="block text-xs text-rambo-dim mb-1">NEVER SAY</label>
+                <p className="text-[10px] text-rambo-dim mb-2">Phrases your SETT3R should never use. One per line.</p>
+                <textarea
+                  value={neverSay}
+                  onChange={e => setNeverSay(e.target.value)}
+                  rows={5}
+                  placeholder={`"You're a rockstar!"\n"Totally amazeballs!"\n"Let's touch base"`}
+                  className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-text focus:border-rambo-green focus:outline-none transition-colors leading-relaxed resize-y"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs text-rambo-dim mb-2">FOLLOW-UPS</label>
+                <p className="text-[10px] text-rambo-dim mb-2">If a lead goes quiet, SETT3R sends these automatically. Use {"{{firstName}}"} to personalise.</p>
+                <div className="space-y-3">
+                  {followups.map((f, i) => (
+                    <div key={i} className="border border-rambo-border rounded p-3 bg-rambo-bg/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-rambo-green text-xs">#{i + 1}</span>
+                        <span className="text-[10px] text-rambo-dim">Send after</span>
+                        <select
+                          value={f.delay}
+                          onChange={e => updateFollowup(i, 'delay', e.target.value)}
+                          className="bg-rambo-bg border border-rambo-border rounded px-2 py-1 text-xs text-rambo-text focus:border-rambo-green focus:outline-none cursor-pointer"
+                        >
+                          {DELAY_OPTIONS.map(d => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                        <span className="text-[10px] text-rambo-dim">of no reply</span>
+                        {followups.length > 1 && (
+                          <button
+                            onClick={() => removeFollowup(i)}
+                            className="ml-auto text-rambo-dim hover:text-rambo-red text-xs cursor-pointer px-1"
+                          >
+                            x
+                          </button>
+                        )}
+                      </div>
+                      <textarea
+                        value={f.message}
+                        onChange={e => updateFollowup(i, 'message', e.target.value)}
+                        rows={2}
+                        placeholder="e.g. Hey {{firstName}}, just checking in - still interested?"
+                        className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-1.5 text-xs text-rambo-text focus:border-rambo-green focus:outline-none leading-relaxed resize-y"
+                      />
+                    </div>
+                  ))}
+                </div>
+                {followups.length < 5 && (
+                  <button
+                    onClick={addFollowup}
+                    className="mt-2 text-[10px] text-rambo-green hover:text-rambo-green/80 cursor-pointer"
+                  >
+                    + Add follow-up
+                  </button>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs text-rambo-dim mb-1">GENERATED PROMPT PREVIEW</label>
+                <p className="text-[10px] text-rambo-dim mb-2">This builds automatically from your inputs above. This is what SETT3R uses to respond.</p>
+                <pre className="w-full bg-rambo-bg border border-rambo-border rounded px-3 py-2 text-xs text-rambo-green/80 leading-relaxed whitespace-pre-wrap">{generatedPrompt}</pre>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleGenerate}
+                  className="bg-rambo-green text-rambo-bg px-5 py-2 rounded text-xs font-bold tracking-wider hover:shadow-[0_0_15px_#39ff14] transition-all duration-200 cursor-pointer"
+                >
+                  GENERATE CONFIG
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="border border-rambo-border text-rambo-dim px-5 py-2 rounded text-xs tracking-wider hover:border-rambo-green hover:text-rambo-green transition-all duration-200 cursor-pointer"
+                >
+                  {saved ? 'SAVED' : 'SAVE DRAFT'}
+                </button>
+                {jsonPreview && (
+                  <button
+                    onClick={() => setActiveView('test')}
+                    className="border border-rambo-purple text-rambo-purple px-5 py-2 rounded text-xs font-bold tracking-wider hover:bg-rambo-purple/10 transition-all duration-200 cursor-pointer"
+                  >
+                    TEST YOUR SETT3R &gt;&gt;
+                  </button>
+                )}
+              </div>
+
+              {jsonPreview && (
+                <div className="mt-4">
+                  <label className="block text-xs text-rambo-dim mb-1">WORKFLOW CONFIG</label>
+                  <pre className="bg-rambo-bg border border-rambo-border rounded p-4 text-xs text-rambo-green overflow-x-auto">
+                    {JSON.stringify(jsonPreview, null, 2)}
+                  </pre>
+                </div>
+              )}
             </div>
-            <div className="text-[10px] text-rambo-dim mt-1">
-              Turn: {turnCount} // Personality: {personality}
+          </main>
+        ) : (
+          /* TEST VIEW */
+          <main className="flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-rambo-border flex items-center justify-between bg-rambo-card/50">
+              <div className="flex items-center gap-3">
+                <SettrAvatar size={28} />
+                <div>
+                  <h2 className="text-rambo-green text-xs tracking-widest uppercase font-bold">Test Your SETT3R</h2>
+                  <p className="text-[10px] text-rambo-dim">
+                    {businessName || 'Your Business'} // {personality} personality // {questions.filter(q => q.trim()).length} qualifying questions
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] text-rambo-dim">Turn: {turnCount}</span>
+                <button
+                  onClick={resetChat}
+                  className="text-rambo-dim text-[10px] border border-rambo-border px-2 py-1 rounded hover:border-rambo-red hover:text-rambo-red transition-colors cursor-pointer"
+                >
+                  RESET
+                </button>
+              </div>
             </div>
-          </div>
-        </aside>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-full gap-4">
+                  <SettrAvatar size={56} />
+                  <p className="text-sm text-rambo-dim text-center max-w-md">
+                    Talk to your SETT3R like a real lead would. See how it handles questions, objections, and qualification based on your config.
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+                    {['"How much is it?"', '"Hey, I saw your post"', '"I\'m interested but busy"', '"What do you offer?"', '"I want to book"'].map((hint, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setChatInput(hint.replace(/"/g, '')); }}
+                        className="text-xs border border-rambo-border rounded-full px-3 py-1.5 text-rambo-dim hover:border-rambo-green hover:text-rambo-green cursor-pointer transition-colors"
+                      >
+                        {hint}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {messages.map((msg, i) => (
+                <div key={i}>
+                  <div className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {msg.role === 'bot' && (
+                      <div className="flex-shrink-0 mt-1">
+                        <SettrAvatar size={24} />
+                      </div>
+                    )}
+                    <div className={`max-w-[70%] rounded-lg px-4 py-3 text-sm leading-relaxed ${
+                      msg.role === 'user'
+                        ? 'bg-rambo-border/50 text-rambo-text'
+                        : 'bg-rambo-green/5 border border-rambo-green/15 text-rambo-text'
+                    }`}>
+                      {msg.text}
+                    </div>
+                  </div>
+                  {msg.role === 'bot' && (
+                    <div className="flex gap-2 mt-1 ml-9">
+                      <span className="text-[9px] text-rambo-amber">Action: {msg.action}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div ref={chatEndRef} />
+            </div>
+
+            <div className="p-4 border-t border-rambo-border bg-rambo-card/50">
+              <div className="flex gap-3 max-w-3xl mx-auto">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSend()}
+                  placeholder="Type as a lead would..."
+                  className="flex-1 bg-rambo-bg border border-rambo-border rounded-lg px-4 py-3 text-sm text-rambo-text focus:border-rambo-green focus:outline-none"
+                />
+                <button
+                  onClick={handleSend}
+                  className="bg-rambo-green text-rambo-bg px-5 py-3 rounded-lg text-sm font-bold hover:shadow-[0_0_15px_#39ff14] transition-all cursor-pointer"
+                >
+                  SEND
+                </button>
+              </div>
+              <div className="text-[10px] text-rambo-dim mt-2 text-center">
+                Personality: {personality} // This is a simulation using your config. Live version uses AI.
+              </div>
+            </div>
+          </main>
+        )}
       </div>
 
       {/* Booking Modal */}

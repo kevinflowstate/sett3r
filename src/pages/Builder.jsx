@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../lib/auth'
 import SettrAvatar from '../components/SettrAvatar'
 
 const PERSONALITIES = ['Direct', 'Warm', 'Funny', 'Professional', 'Luxury']
@@ -53,8 +55,11 @@ const DEFAULT_NEVER_SAY = `"You're a rockstar!"
 "No worries at all!!!"`
 
 
+const BOOKING_URL = 'https://api.leadconnectorhq.com/widget/booking/sett3r-onboarding'
+
 export default function Builder() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const chatEndRef = useRef(null)
 
   const [businessName, setBusinessName] = useState('')
@@ -65,6 +70,29 @@ export default function Builder() {
   const [neverSay, setNeverSay] = useState(DEFAULT_NEVER_SAY)
   const [jsonPreview, setJsonPreview] = useState(null)
   const [saved, setSaved] = useState(false)
+  const [configLoaded, setConfigLoaded] = useState(false)
+
+  // Load existing config from Supabase on mount
+  useEffect(() => {
+    if (!user) return
+    async function loadConfig() {
+      const { data } = await supabase
+        .from('sett3r_clients')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+      if (data) {
+        if (data.business_name) setBusinessName(data.business_name)
+        if (data.personality) setPersonality(data.personality)
+        if (data.qualifying_questions?.length) setQuestions(data.qualifying_questions)
+        if (data.never_say?.length) setNeverSay(data.never_say.join('\n'))
+        if (data.followups?.length) setFollowups(data.followups)
+        if (data.system_prompt) setTargetAudience(data.system_prompt)
+      }
+      setConfigLoaded(true)
+    }
+    loadConfig()
+  }, [user])
 
   const [activeView, setActiveView] = useState('config') // 'config' | 'test'
   const generatedPrompt = buildPrompt(businessName, targetAudience, personality, questions, neverSay)
@@ -127,7 +155,26 @@ export default function Builder() {
     setJsonPreview(config)
   }
 
-  function handleSave() {
+  async function handleSave() {
+    if (!user) return
+    const neverSayArr = neverSay.split('\n').map(s => s.replace(/^["']|["']$/g, '').trim()).filter(Boolean)
+
+    const { error } = await supabase
+      .from('sett3r_clients')
+      .update({
+        business_name: businessName,
+        personality,
+        qualifying_questions: questions.filter(q => q.trim()),
+        never_say: neverSayArr,
+        followups: followups.filter(f => f.message.trim()),
+        system_prompt: targetAudience,
+      })
+      .eq('user_id', user.id)
+
+    if (error) {
+      alert('Failed to save: ' + error.message)
+      return
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
   }
@@ -265,9 +312,9 @@ export default function Builder() {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-[260px_1fr] overflow-hidden">
+      <div className="flex-1 grid grid-cols-[260px_1fr] overflow-hidden builder-grid">
         {/* LEFT SIDEBAR */}
-        <aside className="border-r border-rambo-border p-4 overflow-y-auto bg-rambo-card/30">
+        <aside className="border-r border-rambo-border p-4 overflow-y-auto bg-rambo-card/30 builder-sidebar">
           <h2 className="text-rambo-green text-xs tracking-widest mb-4 uppercase">Navigation</h2>
 
           <div className="space-y-1 mb-6">
@@ -630,12 +677,14 @@ export default function Builder() {
               Your SETT3R config is ready for deployment. Book a 15-minute onboarding call to go live.
             </p>
             <div className="flex gap-3">
-              <button
-                className="flex-1 bg-rambo-green text-rambo-bg py-2 rounded text-xs font-bold tracking-wider hover:shadow-[0_0_20px_#39ff14] transition-all cursor-pointer"
-                onClick={() => setShowBooking(false)}
+              <a
+                href={BOOKING_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 bg-rambo-green text-rambo-bg py-2 rounded text-xs font-bold tracking-wider hover:shadow-[0_0_20px_#39ff14] transition-all cursor-pointer text-center block"
               >
                 BOOK CALL
-              </button>
+              </a>
               <button
                 className="border border-rambo-border text-rambo-dim py-2 px-4 rounded text-xs hover:border-rambo-dim transition-colors cursor-pointer"
                 onClick={() => setShowBooking(false)}

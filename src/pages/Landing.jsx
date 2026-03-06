@@ -91,7 +91,7 @@ export default function Landing() {
             <a href="#comparison" className="text-rambo-dim hover:text-rambo-green transition-colors">VS VA</a>
             <a href="#pricing" className="text-rambo-dim hover:text-rambo-green transition-colors">PRICING</a>
             <button
-              onClick={() => navigate('/builder')}
+              onClick={() => navigate('/login')}
               className="bg-rambo-green text-rambo-bg px-4 py-1.5 rounded text-xs font-bold hover:shadow-[0_0_15px_#39ff14] transition-all cursor-pointer"
             >
               TRY BUILDER

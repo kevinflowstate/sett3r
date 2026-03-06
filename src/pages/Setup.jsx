@@ -156,8 +156,8 @@ export default function Setup() {
 
           <p className="text-[10px] text-rambo-dim text-center mt-4">
             Already have an account?{' '}
-            <button onClick={() => navigate('/builder')} className="text-rambo-green hover:underline cursor-pointer">
-              Go to Builder
+            <button onClick={() => navigate('/login')} className="text-rambo-green hover:underline cursor-pointer">
+              Log in
             </button>
           </p>
         </div>

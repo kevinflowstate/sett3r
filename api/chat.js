@@ -57,7 +57,7 @@ export default async function handler(req) {
     })
   }
 
-  const { messages } = body
+  const { messages, builderPrompt } = body
   if (!messages || !Array.isArray(messages) || messages.length === 0 || messages.length > 30) {
     return new Response(JSON.stringify({ error: 'Invalid messages' }), {
       status: 400,
@@ -81,7 +81,7 @@ export default async function handler(req) {
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
-      system: SYSTEM_PROMPT,
+      system: builderPrompt ? String(builderPrompt).slice(0, 3000) : SYSTEM_PROMPT,
       messages: cleaned,
       stream: true,
     }),

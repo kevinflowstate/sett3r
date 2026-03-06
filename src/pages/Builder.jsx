@@ -52,94 +52,6 @@ const DEFAULT_NEVER_SAY = `"You're a rockstar!"
 "Super excited!!!"
 "No worries at all!!!"`
 
-function detectIntent(message) {
-  const lower = message.toLowerCase()
-  if (/how much|price|cost|rates?|afford|budget|pay|expensive|cheap/i.test(lower))
-    return 'price'
-  if (/busy|quick|short|hurry|no time|later|not now/i.test(lower))
-    return 'busy'
-  if (/not (sure|ready|interested)|maybe later|just looking|browsing/i.test(lower))
-    return 'cold'
-  if (/book|appointment|schedule|slot|available|sign up|start/i.test(lower))
-    return 'booking'
-  if (/what do you|how does|tell me|info|more about|explain|details/i.test(lower))
-    return 'curious'
-  if (/hi|hey|hello|yo|sup|morning|afternoon/i.test(lower))
-    return 'greeting'
-  return 'general'
-}
-
-function generateReply(personality, businessName, questions, message, turnCount, history) {
-  const biz = businessName || 'our team'
-  const tone = personality || 'Direct'
-  const intent = detectIntent(message)
-
-  const greetings = {
-    Direct: `Hey. Thanks for reaching out to ${biz}.`,
-    Warm: `Hey there! So glad you messaged ${biz}. I'd love to help you out.`,
-    Funny: `Well well well... look who slid into ${biz}'s DMs. Love it.`,
-    Professional: `Thanks for getting in touch with ${biz}. Happy to help.`,
-    Luxury: `Welcome. You've connected with ${biz}. Let's see if we're the right fit.`,
-  }
-
-  if (turnCount === 0) {
-    const q = questions[0] || "What's the main goal you're looking to achieve?"
-    return {
-      text: `${greetings[tone]} Quick question - ${q.toLowerCase().replace(/\?$/, '')}?`,
-      action: 'qualify_q1',
-    }
-  }
-
-  if (intent === 'price') {
-    return {
-      text: `Totally get it - price matters. Before I throw numbers at you though, can I ask what you're actually looking to achieve? That way I can tell you exactly what you'd get for the investment.`,
-      action: 'handle_objection',
-    }
-  }
-
-  if (intent === 'busy') {
-    return {
-      text: `No worries, I'll keep it quick. The easiest next step is a 15-min call with ${biz} - no pressure, just a quick chat to see if we can help. Want me to find you a slot?`,
-      action: 'offer_booking',
-    }
-  }
-
-  if (intent === 'cold') {
-    return {
-      text: `Completely understand - no pressure at all. If anything changes or you want to pick this up later, just message back anytime. The door's always open.`,
-      action: 'soft_exit',
-    }
-  }
-
-  if (intent === 'booking') {
-    return {
-      text: `Brilliant - let's get you sorted. I can book you in for a quick 15-minute discovery call with ${biz}. What day works best for you this week?`,
-      action: 'book_appointment',
-    }
-  }
-
-  if (intent === 'curious') {
-    const q = questions[Math.min(turnCount, questions.length - 1)] || "What's your timeline - are you looking to start soon?"
-    return {
-      text: `Great question! I can definitely help with that. Just so I can point you in the right direction - ${q.toLowerCase().replace(/\?$/, '')}?`,
-      action: `qualify_q${Math.min(turnCount + 1, questions.length)}`,
-    }
-  }
-
-  if (turnCount <= questions.length) {
-    const qIdx = Math.min(turnCount, questions.length - 1)
-    const q = questions[qIdx]
-    return {
-      text: `Got it, thanks for sharing that. ${turnCount < questions.length ? q : `You sound like a great fit. The next step is a quick discovery call with ${biz} - no pressure, just a conversation. Want me to find you a slot this week?`}`,
-      action: turnCount < questions.length ? `qualify_q${turnCount + 1}` : 'offer_booking',
-    }
-  }
-
-  return {
-    text: `Based on everything you've told me, I think we can definitely help. The best next step is a quick 15-min call with ${biz}. Want me to get you booked in?`,
-    action: 'offer_booking',
-  }
-}
 
 export default function Builder() {
   const navigate = useNavigate()
@@ -160,6 +72,7 @@ export default function Builder() {
   const [chatInput, setChatInput] = useState('')
   const [messages, setMessages] = useState([])
   const [turnCount, setTurnCount] = useState(0)
+  const [isStreaming, setIsStreaming] = useState(false)
 
   const [score, setScore] = useState(0)
   const [showBooking, setShowBooking] = useState(false)
@@ -227,15 +140,86 @@ export default function Builder() {
     setActiveView('test')
   }
 
-  function handleSend() {
-    if (!chatInput.trim()) return
-    const userMsg = { role: 'user', text: chatInput }
-    const reply = generateReply(personality, businessName, questions, chatInput, turnCount, messages)
-    const botMsg = { role: 'bot', text: reply.text, action: reply.action }
-
-    setMessages(prev => [...prev, userMsg, botMsg])
+  async function handleSend() {
+    if (!chatInput.trim() || isStreaming) return
+    const text = chatInput.trim()
+    const userMsg = { role: 'user', text }
+    const newMessages = [...messages, userMsg]
+    setMessages(newMessages)
     setChatInput('')
+    setIsStreaming(true)
     setTurnCount(prev => prev + 1)
+
+    // Add placeholder for bot response
+    setMessages(prev => [...prev, { role: 'bot', text: '' }])
+
+    try {
+      const apiMessages = newMessages.map(m => ({
+        role: m.role === 'bot' ? 'assistant' : 'user',
+        content: m.text,
+      }))
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: apiMessages,
+          builderPrompt: generatedPrompt,
+        }),
+      })
+
+      if (!res.ok) throw new Error('Failed')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let fullText = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6)
+          if (data === '[DONE]') continue
+
+          try {
+            const parsed = JSON.parse(data)
+            if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+              fullText += parsed.delta.text
+              setMessages(prev => {
+                const updated = [...prev]
+                updated[updated.length - 1] = { role: 'bot', text: fullText }
+                return updated
+              })
+            }
+          } catch {
+            // skip malformed chunks
+          }
+        }
+      }
+
+      if (!fullText) {
+        setMessages(prev => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'bot', text: 'Something went wrong. Try again.' }
+          return updated
+        })
+      }
+    } catch {
+      setMessages(prev => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { role: 'bot', text: 'Something went wrong. Try again.' }
+        return updated
+      })
+    } finally {
+      setIsStreaming(false)
+    }
   }
 
   function resetChat() {
@@ -585,13 +569,15 @@ export default function Builder() {
                         : 'bg-rambo-green/5 border border-rambo-green/15 text-rambo-text'
                     }`}>
                       {msg.text}
+                      {msg.role === 'bot' && msg.text === '' && isStreaming && (
+                        <div className="flex gap-1">
+                          <span className="w-1.5 h-1.5 bg-rambo-green rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 bg-rambo-green rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 bg-rambo-green rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      )}
                     </div>
                   </div>
-                  {msg.role === 'bot' && (
-                    <div className="flex gap-2 mt-1 ml-9">
-                      <span className="text-[9px] text-rambo-amber">Action: {msg.action}</span>
-                    </div>
-                  )}
                 </div>
               ))}
               <div ref={chatEndRef} />
@@ -609,13 +595,14 @@ export default function Builder() {
                 />
                 <button
                   onClick={handleSend}
-                  className="bg-rambo-green text-rambo-bg px-5 py-3 rounded-lg text-sm font-bold hover:shadow-[0_0_15px_#39ff14] transition-all cursor-pointer"
+                  disabled={isStreaming || !chatInput.trim()}
+                  className="bg-rambo-green text-rambo-bg px-5 py-3 rounded-lg text-sm font-bold hover:shadow-[0_0_15px_#39ff14] transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  SEND
+                  {isStreaming ? '...' : 'SEND'}
                 </button>
               </div>
               <div className="text-[10px] text-rambo-dim mt-2 text-center">
-                Personality: {personality} // This is a simulation using your config. Live version uses AI.
+                Personality: {personality} // Live AI responding with your config
               </div>
             </div>
           </main>
